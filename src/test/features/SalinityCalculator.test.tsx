@@ -77,7 +77,11 @@ describe('SalinityCalculator', () => {
     const user = userEvent.setup()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ dose: 150.5 }),
+      json: async () => ({
+        success: true,
+        request_id: 'c24cc8a3-8a8a-421c-90df-225c23f0890e',
+        data: { volume: 200, current: 0, target: 35, quantity: 150.5 },
+      }),
     }))
     renderCalculator()
     await user.type(screen.getByPlaceholderText('e.g. 200'), '200')

@@ -1,4 +1,4 @@
-import { apiGet } from './client'
+import { ApiRequestError, apiGet } from './client'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -11,11 +11,18 @@ export interface SalinityDoseParams {
   target: number
 }
 
-/**
- * The API response shape is not formally documented in the OpenAPI spec ({}).
- * We accept any object with numeric values and extract the dose at render time.
- */
-export type SalinityDoseResponse = Record<string, number>
+export interface SalinityDoseResponse {
+  volume: number
+  current: number
+  target: number
+  quantity: number
+}
+
+interface SalinityDoseApiResponse {
+  success: boolean
+  request_id: string
+  data: SalinityDoseResponse
+}
 
 // ─── API call ────────────────────────────────────────────────────────────────
 
@@ -23,7 +30,7 @@ export async function calculateSalinityDose(
   params: SalinityDoseParams,
   signal?: AbortSignal,
 ): Promise<SalinityDoseResponse> {
-  return apiGet<SalinityDoseResponse>(
+  const response = await apiGet<unknown>(
     '/api/v1/calculate/dose/salinity',
     {
       volume: String(params.volume),
@@ -32,27 +39,42 @@ export async function calculateSalinityDose(
     },
     signal,
   )
+
+  if (!isSalinityDoseApiResponse(response)) {
+    throw new ApiRequestError(
+      'Received an unexpected salinity response shape from the API.',
+      502,
+    )
+  }
+
+  return response.data
 }
 
 // ─── Result formatting ───────────────────────────────────────────────────────
 
-const KNOWN_DOSE_KEYS = ['dose', 'dose_grams', 'grams', 'amount', 'salt', 'salt_dose', 'quantity']
+function isSalinityDoseApiResponse(input: unknown): input is SalinityDoseApiResponse {
+  if (typeof input !== 'object' || input === null) return false
+
+  const obj = input as Record<string, unknown>
+  if (typeof obj.success !== 'boolean') return false
+  if (typeof obj.request_id !== 'string') return false
+  if (typeof obj.data !== 'object' || obj.data === null) return false
+
+  const data = obj.data as Record<string, unknown>
+  return (
+    typeof data.volume === 'number' &&
+    typeof data.current === 'number' &&
+    typeof data.target === 'number' &&
+    typeof data.quantity === 'number'
+  )
+}
 
 /**
  * Extracts and formats the primary dose value from the API response.
  * Tries well-known field names first, then falls back to the first numeric value.
  */
 export function formatDoseResult(result: SalinityDoseResponse): string {
-  for (const key of KNOWN_DOSE_KEYS) {
-    if (typeof result[key] === 'number') {
-      return formatGrams(result[key])
-    }
-  }
-  // Fallback: use first numeric value
-  for (const val of Object.values(result)) {
-    if (typeof val === 'number') return formatGrams(val)
-  }
-  return JSON.stringify(result)
+  return formatGrams(result.quantity)
 }
 
 function formatGrams(value: number): string {

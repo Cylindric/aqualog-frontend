@@ -1,25 +1,51 @@
-import { describe, it, expect } from 'vitest'
-import { formatDoseResult } from '../../api/salinity'
+import { describe, it, expect, vi } from 'vitest'
+import { calculateSalinityDose, formatDoseResult } from '../../api/salinity'
 
 describe('formatDoseResult', () => {
-  it('formats dose field in grams', () => {
-    expect(formatDoseResult({ dose: 150.5 })).toBe('150.5 g')
+  it('formats quantity in grams', () => {
+    expect(formatDoseResult({ volume: 250, current: 34, target: 35, quantity: 275 })).toBe('275.0 g')
   })
 
-  it('converts to kg when dose >= 1000g', () => {
-    expect(formatDoseResult({ dose: 1500 })).toBe('1.500 kg')
+  it('converts to kg when quantity >= 1000g', () => {
+    expect(formatDoseResult({ volume: 250, current: 34, target: 35, quantity: 1500 })).toBe('1.500 kg')
+  })
+})
+
+describe('calculateSalinityDose', () => {
+  it('unwraps data payload and returns numeric values', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          request_id: 'c24cc8a3-8a8a-421c-90df-225c23f0890e',
+          data: { volume: 250, current: 34, target: 35, quantity: 275 },
+        }),
+      }),
+    )
+
+    await expect(calculateSalinityDose({ volume: 250, current: 34, target: 35 })).resolves.toEqual({
+      volume: 250,
+      current: 34,
+      target: 35,
+      quantity: 275,
+    })
   })
 
-  it('falls back to dose_grams field name', () => {
-    expect(formatDoseResult({ dose_grams: 75.2 })).toBe('75.2 g')
-  })
+  it('throws when response does not match schema', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, request_id: 'abc', data: { volume: 250 } }),
+      }),
+    )
 
-  it('falls back to first numeric value if no known key', () => {
-    expect(formatDoseResult({ result: 200.0 })).toBe('200.0 g')
-  })
-
-  it('falls back to JSON string if no numeric values', () => {
-    // @ts-expect-error - intentionally passing non-numeric for test coverage
-    expect(formatDoseResult({ message: 'ok' })).toBe(JSON.stringify({ message: 'ok' }))
+    await expect(calculateSalinityDose({ volume: 250, current: 34, target: 35 })).rejects.toMatchObject({
+      name: 'ApiRequestError',
+      status: 502,
+      message: 'Received an unexpected salinity response shape from the API.',
+    })
   })
 })
