@@ -20,6 +20,28 @@ export class ApiRequestError extends Error {
   }
 }
 
+export type AccessTokenProvider = () => string | null | Promise<string | null>
+export type RefreshAccessTokenProvider = () => string | null | Promise<string | null>
+
+let accessTokenProvider: AccessTokenProvider = () => null
+let refreshAccessTokenProvider: RefreshAccessTokenProvider = () => null
+
+export function setAccessTokenProvider(provider: AccessTokenProvider): void {
+  accessTokenProvider = provider
+}
+
+export function setRefreshAccessTokenProvider(provider: RefreshAccessTokenProvider): void {
+  refreshAccessTokenProvider = provider
+}
+
+async function getAccessToken(): Promise<string> {
+  const token = await accessTokenProvider()
+  if (!token) {
+    throw new ApiRequestError('No authenticated session is available.', 401)
+  }
+  return token
+}
+
 // ─── HTTP client ─────────────────────────────────────────────────────────────
 
 /**
@@ -43,14 +65,39 @@ export async function apiGet<T>(
     ? AbortSignal.any([signal, timeoutSignal])
     : timeoutSignal
 
-  const response = await fetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${config.apiToken}`,
-      Accept: 'application/json',
-    },
-    signal: combinedSignal,
-  })
+  const runRequest = (token: string) =>
+    fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      signal: combinedSignal,
+    })
+
+  let accessToken: string
+  try {
+    accessToken = await getAccessToken()
+  } catch (error) {
+    if (!(error instanceof ApiRequestError) || error.status !== 401) {
+      throw error
+    }
+
+    const refreshedToken = await refreshAccessTokenProvider()
+    if (!refreshedToken) {
+      throw error
+    }
+    accessToken = refreshedToken
+  }
+
+  let response = await runRequest(accessToken)
+
+  if (response.status === 401) {
+    const refreshedToken = await refreshAccessTokenProvider()
+    if (refreshedToken) {
+      response = await runRequest(refreshedToken)
+    }
+  }
 
   if (!response.ok) {
     if (response.status === 422) {
@@ -93,7 +140,7 @@ export async function checkReadiness(signal?: AbortSignal): Promise<void> {
 export function toUserMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.status === 401 || error.status === 403) {
-      return 'Authentication failed. Check the API token configuration.'
+      return 'Authentication failed. Please sign in again.'
     }
     if (error.validationErrors?.length) {
       return error.validationErrors.map((v) => v.msg).join('; ')

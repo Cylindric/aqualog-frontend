@@ -1,8 +1,21 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { ApiRequestError, toUserMessage } from '../../api/client'
+import {
+  ApiRequestError,
+  setAccessTokenProvider,
+  setRefreshAccessTokenProvider,
+  toUserMessage,
+} from '../../api/client'
 
 vi.mock('../../config', () => ({
-  config: { apiBaseUrl: 'http://localhost:8000', apiToken: 'test-token' },
+  config: {
+    apiBaseUrl: 'http://localhost:8000',
+    oidcAuthority: 'https://auth.example.com/application/o/aqualog/',
+    oidcClientId: 'frontend-test-replace-with-aqualog-spa-client-id',
+    oidcRedirectUri: 'http://localhost:5173/auth/callback',
+    oidcPostLogoutRedirectUri: 'http://localhost:5173',
+    oidcScope: 'openid profile email',
+  },
+  hasOidcConfig: () => true,
   isConfigured: () => true,
   configErrors: () => [],
 }))
@@ -51,11 +64,16 @@ describe('toUserMessage', () => {
 // ─── apiGet ───────────────────────────────────────────────────────────────────
 
 describe('apiGet', () => {
-  afterEach(() => { vi.restoreAllMocks() })
+  afterEach(() => {
+    setAccessTokenProvider(() => null)
+    setRefreshAccessTokenProvider(() => null)
+    vi.restoreAllMocks()
+  })
 
   it('returns parsed JSON on success', async () => {
     const { apiGet } = await import('../../api/client')
     const payload = { dose: 42.5 }
+    setAccessTokenProvider(() => 'test-token')
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => payload,
@@ -66,15 +84,60 @@ describe('apiGet', () => {
 
   it('includes Authorization header', async () => {
     const { apiGet } = await import('../../api/client')
+    setAccessTokenProvider(() => 'dynamic-token')
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
     vi.stubGlobal('fetch', fetchMock)
     await apiGet('/api/v1/test')
     const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect((options.headers as Record<string, string>)['Authorization']).toBe('Bearer test-token')
+    expect((options.headers as Record<string, string>)['Authorization']).toBe('Bearer dynamic-token')
+  })
+
+  it('throws auth error when token provider returns null', async () => {
+    const { apiGet } = await import('../../api/client')
+    setAccessTokenProvider(() => null)
+    await expect(apiGet('/api/v1/test')).rejects.toMatchObject({ status: 401 })
+  })
+
+  it('retries once after 401 when refresh returns a new token', async () => {
+    const { apiGet } = await import('../../api/client')
+    setAccessTokenProvider(() => 'expired-token')
+    setRefreshAccessTokenProvider(() => 'fresh-token')
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized', json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(apiGet('/api/v1/test')).resolves.toEqual({ ok: true })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    const firstHeaders = fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>
+    const secondHeaders = fetchMock.mock.calls[1]?.[1]?.headers as Record<string, string>
+    expect(firstHeaders.Authorization).toBe('Bearer expired-token')
+    expect(secondHeaders.Authorization).toBe('Bearer fresh-token')
+  })
+
+  it('returns 401 error when refresh does not provide a token', async () => {
+    const { apiGet } = await import('../../api/client')
+    setAccessTokenProvider(() => 'expired-token')
+    setRefreshAccessTokenProvider(() => null)
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      json: async () => ({}),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(apiGet('/api/v1/test')).rejects.toMatchObject({ status: 401 })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('throws ApiRequestError for 422 with validation detail', async () => {
     const { apiGet } = await import('../../api/client')
+    setAccessTokenProvider(() => 'test-token')
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       status: 422,
@@ -91,6 +154,7 @@ describe('apiGet', () => {
 
   it('throws ApiRequestError for other non-2xx responses', async () => {
     const { apiGet } = await import('../../api/client')
+    setAccessTokenProvider(() => 'test-token')
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       status: 503,

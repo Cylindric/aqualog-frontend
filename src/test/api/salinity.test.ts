@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { calculateSalinityDose, formatDoseResult } from '../../api/salinity'
+import { setAccessTokenProvider, setRefreshAccessTokenProvider } from '../../api/client'
+
+setAccessTokenProvider(() => 'test-token')
+setRefreshAccessTokenProvider(() => 'test-token')
 
 describe('formatDoseResult', () => {
   it('formats quantity in grams', () => {

@@ -1,0 +1,14 @@
+services:
+  frontend:
+    image: aqualog-frontend:latest
+    container_name: frontend
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+      VITE_OIDC_AUTHORITY: ${VITE_OIDC_AUTHORITY}
+      VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID}
+      VITE_OIDC_REDIRECT_URI: ${VITE_OIDC_REDIRECT_URI}
+      VITE_OIDC_POST_LOGOUT_REDIRECT_URI: ${VITE_OIDC_POST_LOGOUT_REDIRECT_URI}
+      VITE_OIDC_SCOPE: ${VITE_OIDC_SCOPE}
+    restart: unless-stopped
+    ports:
+      - "8002:80"

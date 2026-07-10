@@ -4,9 +4,18 @@ import userEvent from '@testing-library/user-event'
 import { SalinityCalculator } from '../../features/salinity/SalinityCalculator'
 import { Provider } from '../../components/ui/provider'
 import type { ReactNode } from 'react'
+import { setAccessTokenProvider, setRefreshAccessTokenProvider } from '../../api/client'
 
 vi.mock('../../config', () => ({
-  config: { apiBaseUrl: 'http://localhost:8000', apiToken: 'test-token' },
+  config: {
+    apiBaseUrl: 'http://localhost:8000',
+    oidcAuthority: 'https://auth.example.com/application/o/aqualog/',
+    oidcClientId: 'frontend-test-replace-with-aqualog-spa-client-id',
+    oidcRedirectUri: 'http://localhost:5173/auth/callback',
+    oidcPostLogoutRedirectUri: 'http://localhost:5173',
+    oidcScope: 'openid profile email',
+  },
+  hasOidcConfig: () => true,
   isConfigured: () => true,
   configErrors: () => [],
 }))
@@ -35,8 +44,17 @@ function Wrapper({ children }: { children: ReactNode }) {
 const renderCalculator = () =>
   render(<SalinityCalculator />, { wrapper: Wrapper })
 
-beforeEach(() => { mockMatchMedia() })
-afterEach(() => { vi.restoreAllMocks() })
+beforeEach(() => {
+  mockMatchMedia()
+  setAccessTokenProvider(() => 'test-token')
+  setRefreshAccessTokenProvider(() => 'test-token')
+})
+
+afterEach(() => {
+  setAccessTokenProvider(() => null)
+  setRefreshAccessTokenProvider(() => null)
+  vi.restoreAllMocks()
+})
 
 describe('SalinityCalculator', () => {
   it('renders all three input fields', () => {

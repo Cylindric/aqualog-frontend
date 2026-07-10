@@ -1,7 +1,8 @@
-import { Box, Button, Flex, Skeleton, Stack, Text, VStack } from '@chakra-ui/react'
+import { Badge, Box, Button, Flex, HStack, Skeleton, Stack, Text, VStack } from '@chakra-ui/react'
 import type { ReactNode } from 'react'
 import { BottomNav } from './BottomNav'
 import { useReadinessCheck } from '../hooks/useReadinessCheck'
+import { useAuth } from 'react-oidc-context'
 
 interface ShellProps {
   children: ReactNode
@@ -9,11 +10,12 @@ interface ShellProps {
 
 export function Shell({ children }: ShellProps) {
   const { state, errorMessage, retry } = useReadinessCheck()
+  const auth = useAuth()
 
   return (
     <Flex direction="column" minH="100dvh">
       {/* Header */}
-      <Box
+      <Flex
         as="header"
         bg="bg.surface"
         borderBottomWidth="1px"
@@ -23,11 +25,23 @@ export function Shell({ children }: ShellProps) {
         position="sticky"
         top={0}
         zIndex={10}
+        align="center"
+        justify="space-between"
       >
         <Text fontWeight="bold" fontSize="lg" letterSpacing="tight">
           🐠 Aqualog
         </Text>
-      </Box>
+        {auth.isAuthenticated && (
+          <HStack gap={2}>
+            <Badge colorPalette="green" variant="subtle" borderRadius="full" px={2} py={0.5}>
+              Authenticated
+            </Badge>
+            <Button size="xs" variant="ghost" onClick={() => void auth.signoutRedirect()}>
+              Sign out
+            </Button>
+          </HStack>
+        )}
+      </Flex>
 
       {/* Main content */}
       <Box as="main" flex={1} px={4} pt={4} pb="80px" maxW="600px" w="full" mx="auto">
