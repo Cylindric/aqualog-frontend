@@ -1,15 +1,57 @@
 version: '3'
 
+vars:
+  ContainerName: aqualog-frontend:latest
+
+dotenv:
+  - .env
+
 tasks:
   default:
     desc: Show available tasks
     cmds:
       - task --list
+    
+  setup:
+    desc: Set up the project environment
+    cmds:
+      - cmd: ./tools/setup.sh
 
   build:
     desc: Build the project
     cmds:
-      - cmd: source .env && docker build -t aqualog-frontend:latest .
+      - cmd: source .env && docker build -t {{.ContainerName}} .
+
+  run:
+    desc: Run the project in a Docker container
+    cmds:
+      - cmd: |
+          docker run --rm \
+          -e VITE_OIDC_AUTHORITY=${AQUALOG_OAUTH_ISSUER_URL} \
+          -e VITE_OIDC_CLIENT_ID=${AQUALOG_OAUTH_CLIENT_ID} \
+          -e VITE_OIDC_REDIRECT_URI=${VITE_OIDC_REDIRECT_URI} \
+          -e VITE_OIDC_LOGOUT_REDIRECT_URI=${VITE_OIDC_POST_LOGOUT_REDIRECT_URI} \
+          -e VITE_OIDC_SCOPES='${VITE_OIDC_SCOPE}' \
+          -p 9000:8000 \
+          {{.ContainerName}}
+
+  scan:
+    desc: Run Trivy scan for vulnerabilities
+    cmds:
+      - cmd: |
+          docker run \
+          --rm \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v /var/cache/trivy:/tmp \
+          -v ./.data/trivy:/data \
+          aquasec/trivy image \
+          --no-progress \
+          --format table --output /data/scan.txt \
+          --scanners vuln,secret \
+          --image-config-scanners misconfig,secret \
+          --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
+          --cache-dir /tmp/trivy \
+          {{.ContainerName}}
 
   up:
     desc: Build and start the frontend service with docker-compose

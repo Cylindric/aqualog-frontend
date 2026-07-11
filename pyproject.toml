@@ -1,0 +1,35 @@
+[project]
+name = "frontend"
+version = "0.0.0"
+description = "AquaLog Frontend"
+authors = [
+    {name = "Cylindric",email = "mark@hanfordonline.co.uk"}
+]
+readme = "README.md"
+requires-python = ">=3.10,<4.0"
+
+dependencies = [
+    "fastapi~=0.139.0",
+    "uvicorn[standard]~=0.51.0",
+    "pip>=25.3"
+]
+
+[tool.poetry]
+package-mode = false
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "pep440"
+version_provider = "pep621"
+update_changelog_on_bump = true
+major_version_zero = true
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "commitizen (>=4.16.4,<4.17.0)"
+]

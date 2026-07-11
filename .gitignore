@@ -1,17 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
 # Dependencies
 node_modules/
 
 # Build output
 dist/
 *.tsbuildinfo
-
-# Local environment (contains secrets - never commit)
-.env.local
-.env.*.local
-.env
-
-# Editor
-.idea/
 
 # OS
 .DS_Store
@@ -20,3 +17,12 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Local environment (contains secrets - never commit)
+.env.local
+.env.*.local
+.env
+.venv
+
+# Distribution / packaging
+.data

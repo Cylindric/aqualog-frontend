@@ -23,11 +23,21 @@ ENV VITE_OIDC_SCOPE=${VITE_OIDC_SCOPE}
 
 RUN npm run build
 
-FROM nginx:1.29-alpine
+FROM python:3.12-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-EXPOSE 80
+WORKDIR /app
 
-CMD ["nginx", "-g", "daemon off;"]
+
+COPY pyproject.toml poetry.lock ./
+RUN pip install --upgrade pip && pip install --no-cache-dir poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --only main --no-interaction --no-ansi
+COPY backend /app/backend
+COPY --from=build /app/dist /app/frontend
+
+EXPOSE 8000
+
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
