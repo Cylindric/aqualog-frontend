@@ -1,7 +1,11 @@
 version: '3'
 
 vars:
-  ContainerName: aqualog-frontend:latest
+  ContainerName: aqualog-frontend
+  Version:
+    sh: poetry run cz version --project
+  MajorVersion:
+    sh: poetry run cz version --project --major
 
 dotenv:
   - .env
@@ -20,7 +24,7 @@ tasks:
   build:
     desc: Build the project
     cmds:
-      - cmd: source .env && docker build -t {{.ContainerName}} .
+      - cmd: source .env && docker build -t {{.ContainerName}}:{{.Version}} .
 
   run:
     desc: Run the project in a Docker container
@@ -33,7 +37,7 @@ tasks:
           -e VITE_OIDC_LOGOUT_REDIRECT_URI=${VITE_OIDC_POST_LOGOUT_REDIRECT_URI} \
           -e VITE_OIDC_SCOPES='${VITE_OIDC_SCOPE}' \
           -p 9000:8000 \
-          {{.ContainerName}}
+          {{.ContainerName}}:{{.Version}}
 
   scan:
     desc: Run Trivy scan for vulnerabilities
@@ -46,12 +50,12 @@ tasks:
           -v ./.data/trivy:/data \
           aquasec/trivy image \
           --no-progress \
-          --format table --output /data/scan.txt \
+          --format table --output /data/scan-{{.Version}}.txt \
           --scanners vuln,secret \
           --image-config-scanners misconfig,secret \
           --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
           --cache-dir /tmp/trivy \
-          {{.ContainerName}}
+          {{.ContainerName}}:{{.Version}}
 
   up:
     desc: Build and start the frontend service with docker-compose
