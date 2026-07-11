@@ -10,9 +10,9 @@ export function ConfigErrorPage() {
         ⚙️ Configuration Error
       </Heading>
       <Text color="fg.muted" mb={4} fontSize="sm">
-        The application cannot start because required environment variables are missing.
-        Create a <Code>.env.local</Code> file (see <Code>.env.example</Code>) and restart
-        the dev server.
+        The application cannot start because runtime configuration could not be loaded.
+        Ensure the backend <Code>/api/runtime-config</Code> endpoint is reachable and
+        provides the required <Code>VITE_*</Code> values.
       </Text>
       <Stack gap={2}>
         {errors.map((err) => (

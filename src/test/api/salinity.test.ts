@@ -2,6 +2,21 @@ import { describe, it, expect, vi } from 'vitest'
 import { calculateSalinityDose, formatDoseResult } from '../../api/salinity'
 import { setAccessTokenProvider, setRefreshAccessTokenProvider } from '../../api/client'
 
+vi.mock('../../config', () => ({
+  config: {
+    apiBaseUrl: 'http://localhost:8000',
+    oidcAuthority: 'https://auth.example.com/application/o/aqualog/',
+    oidcClientId: 'frontend-test-replace-with-aqualog-spa-client-id',
+    oidcRedirectUri: 'http://localhost:5173/auth/callback',
+    oidcPostLogoutRedirectUri: 'http://localhost:5173',
+    oidcScope: 'openid profile email',
+  },
+  hasOidcConfig: () => true,
+  isConfigured: () => true,
+  configErrors: () => [],
+  loadRuntimeConfig: async () => {},
+}))
+
 setAccessTokenProvider(() => 'test-token')
 setRefreshAccessTokenProvider(() => 'test-token')
 
