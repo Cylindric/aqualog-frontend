@@ -15,6 +15,11 @@ tasks:
     desc: Show available tasks
     cmds:
       - task --list
+  
+  bump-rc:
+    desc: Bump the project version and create a changelog
+    cmds:
+      - cmd: poetry run cz bump --prerelease rc --yes
     
   setup:
     desc: Set up the project environment
