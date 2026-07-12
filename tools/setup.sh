@@ -13,12 +13,12 @@ else
     echo -e "${COLOR_GREEN}.env file already exists. Skipping creation.${COLOR_RESET}"
 fi
 
-if [ ! -d .venv ]; then
-    python3 -m venv .venv
-    echo -e "${COLOR_ORANGE}Created virtual environment in .venv.${COLOR_RESET}"
-else
-    echo -e "${COLOR_GREEN}Virtual environment already exists. Skipping creation.${COLOR_RESET}"
-fi
+# if [ ! -d .venv ]; then
+#     python3 -m venv .venv
+#     echo -e "${COLOR_ORANGE}Created virtual environment in .venv.${COLOR_RESET}"
+# else
+#     echo -e "${COLOR_GREEN}Virtual environment already exists. Skipping creation.${COLOR_RESET}"
+# fi
 
 # Install system-wide dependencies
 if ! command -v python3 &> /dev/null; then
@@ -34,6 +34,25 @@ if ! command -v poetry &> /dev/null; then
     echo -e "${COLOR_ORANGE}poetry is not installed. Installing...${COLOR_RESET}"
     pipx install poetry
 fi
+
+# Install NVM if not already installed
+if [ ! -d "$HOME/.nvm" ]; then
+    echo -e "${COLOR_ORANGE}NVM is not installed. Installing...${COLOR_RESET}"
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+fi
+
+# Install Node.js using NVM if not already installed
+if ! command -v node &> /dev/null; then
+    echo -e "${COLOR_ORANGE}Node.js is not installed. Installing...${COLOR_RESET}"
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+    nvm install --lts
+fi
+
+# Update NPM dependencies
+npm install
 
 # Activate the virtual environment
 eval $(poetry env activate)
