@@ -14,6 +14,11 @@ dependencies = [
     "pip>=25.3"
 ]
 
+[dependency-groups]
+dev = [
+    "commitizen (>=4.16.4,<4.17.0)"
+]
+
 [tool.poetry]
 package-mode = false
 
@@ -28,8 +33,3 @@ major_version_zero = false
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[dependency-groups]
-dev = [
-    "commitizen (>=4.16.4,<4.17.0)"
-]
