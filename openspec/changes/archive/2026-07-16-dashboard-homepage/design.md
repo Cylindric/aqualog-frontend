@@ -2,7 +2,7 @@
 
 The application currently redirects authenticated users directly to specific tool pages (e.g., Salinity Calculator). There is no central landing page to orient users or provide an overview of available features. The existing architecture includes:
 - React Router for routing with authentication callbacks
-- Chakra UI v3 for component styling
+- Mantine for component styling
 - Bottom navigation component for app-wide navigation
 - OIDC-based authentication flow via OidcProvider
 - Existing pages: CalculatorPage, AuthCallbackPage, ConfigErrorPage, NotFoundPage
@@ -14,7 +14,7 @@ The application currently redirects authenticated users directly to specific too
 - Design an extensible layout that can accommodate future feature additions
 - Integrate with existing authentication and navigation systems
 - Provide clear, accessible navigation to the Salinity Calculator
-- Maintain consistency with existing Chakra UI design patterns
+- Maintain consistency with existing Mantine design patterns
 
 **Non-Goals:**
 - Redesigning existing pages or navigation components
@@ -37,7 +37,7 @@ The application currently redirects authenticated users directly to specific too
 **Choice:** Use a grid-based card or button layout with each feature as a clickable navigation element.
 
 **Rationale:** 
-- Chakra UI provides responsive grid components out of the box
+- Mantine provides responsive grid components out of the box
 - Card pattern is familiar to users and easily extensible
 - Supports icons, descriptions, and visual hierarchy
 - Scales well from 1 to many features

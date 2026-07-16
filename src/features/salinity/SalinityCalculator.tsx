@@ -1,15 +1,5 @@
 import { type FormEvent, useState } from 'react'
-import {
-  Box,
-  Button,
-  Card,
-  Field,
-  Heading,
-  Input,
-  Stack,
-  Stat,
-  Text,
-} from '@chakra-ui/react'
+import { Alert, Box, Button, Card, NumberInput, Stack, Text, Title } from '@mantine/core'
 import { useSalinityCalculator } from './useSalinityCalculator'
 import { formatDoseResult } from '../../api/salinity'
 
@@ -43,6 +33,7 @@ function validate(values: FormValues): FormErrors {
   if (!errors.current && !errors.target && current >= target) {
     errors.target = 'Target salinity must be higher than current salinity'
   }
+
   return errors
 }
 
@@ -53,8 +44,8 @@ export function SalinityCalculator() {
   const [submitted, setSubmitted] = useState(false)
 
   function handleChange(field: keyof FormValues) {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      const next = { ...values, [field]: e.target.value }
+    return (value: string | number) => {
+      const next = { ...values, [field]: value === '' ? '' : String(value) }
       setValues(next)
       if (submitted) setErrors(validate(next))
       reset()
@@ -64,6 +55,7 @@ export function SalinityCalculator() {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setSubmitted(true)
+
     const validationErrors = validate(values)
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) return
@@ -76,104 +68,81 @@ export function SalinityCalculator() {
   }
 
   return (
-    <Stack gap={6}>
+    <Stack gap="lg">
       <Box>
-        <Heading size="md" mb={1}>
+        <Title order={3} mb="xs">
           Salinity Dose Calculator
-        </Heading>
-        <Text color="fg.muted" fontSize="sm">
+        </Title>
+        <Text c="dimmed" size="sm">
           Calculate how much salt to add to raise salinity to your target level.
         </Text>
       </Box>
 
-      <Card.Root variant="outline">
-        <Card.Body>
+      <Card withBorder>
+        <Card.Section p="md">
           <form onSubmit={handleSubmit} noValidate>
-            <Stack gap={4}>
-              <Field.Root invalid={!!errors.volume}>
-                <Field.Label>
-                  Volume{' '}
-                  <Text as="span" color="fg.muted" fontWeight="normal">
-                    (litres)
-                  </Text>
-                </Field.Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  min="0.01"
-                  placeholder="e.g. 200"
-                  value={values.volume}
-                  onChange={handleChange('volume')}
-                  disabled={loading}
-                />
-                <Field.ErrorText>{errors.volume}</Field.ErrorText>
-              </Field.Root>
+            <Stack gap="md">
+              <NumberInput
+                label="Volume (litres)"
+                error={errors.volume}
+                decimalScale={2}
+                allowNegative={false}
+                min={0.01}
+                clampBehavior="none"
+                placeholder="e.g. 200"
+                value={values.volume}
+                onChange={handleChange('volume')}
+                disabled={loading}
+              />
 
-              <Field.Root invalid={!!errors.current}>
-                <Field.Label>
-                  Current salinity{' '}
-                  <Text as="span" color="fg.muted" fontWeight="normal">
-                    (‰ PPT)
-                  </Text>
-                </Field.Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.1"
-                  min="0"
-                  placeholder="e.g. 0"
-                  value={values.current}
-                  onChange={handleChange('current')}
-                  disabled={loading}
-                />
-                <Field.ErrorText>{errors.current}</Field.ErrorText>
-              </Field.Root>
+              <NumberInput
+                label="Current salinity (‰ PPT)"
+                error={errors.current}
+                decimalScale={1}
+                allowNegative={false}
+                min={0}
+                clampBehavior="none"
+                placeholder="e.g. 0"
+                value={values.current}
+                onChange={handleChange('current')}
+                disabled={loading}
+              />
 
-              <Field.Root invalid={!!errors.target}>
-                <Field.Label>
-                  Target salinity{' '}
-                  <Text as="span" color="fg.muted" fontWeight="normal">
-                    (‰ PPT)
-                  </Text>
-                </Field.Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.1"
-                  min="0.1"
-                  placeholder="e.g. 35"
-                  value={values.target}
-                  onChange={handleChange('target')}
-                  disabled={loading}
-                />
-                <Field.ErrorText>{errors.target}</Field.ErrorText>
-                <Field.HelperText>Typical reef salinity: 33–36 ‰</Field.HelperText>
-              </Field.Root>
+              <NumberInput
+                label="Target salinity (‰ PPT)"
+                description="Typical reef salinity: 33-36 ‰"
+                error={errors.target}
+                decimalScale={1}
+                allowNegative={false}
+                min={0.1}
+                clampBehavior="none"
+                placeholder="e.g. 35"
+                value={values.target}
+                onChange={handleChange('target')}
+                disabled={loading}
+              />
 
-              <Button type="submit" colorPalette="blue" loading={loading} w="full" size="lg">
+              <Button type="submit" loading={loading} fullWidth>
                 Calculate
               </Button>
             </Stack>
           </form>
-        </Card.Body>
-      </Card.Root>
+        </Card.Section>
+      </Card>
 
-      {/* Result area */}
       {!result && !error && !loading && (
         <Box
-          borderWidth="1px"
-          borderStyle="dashed"
-          borderColor="border.subtle"
-          borderRadius="xl"
-          px={6}
-          py={8}
-          textAlign="center"
+          p="xl"
+          ta="center"
+          style={{
+            border: '1px dashed var(--mantine-color-gray-4)',
+            borderRadius: 'var(--mantine-radius-xl)',
+          }}
         >
-          <Text fontSize="2xl" mb={2}>
+          <Text size="2rem" mb="xs">
             🧂
           </Text>
-          <Text color="fg.muted" fontSize="sm">
+          <Text c="dimmed" size="sm">
             Enter your tank volume and salinity levels above, then tap Calculate to
             see the salt dose.
           </Text>
@@ -181,39 +150,27 @@ export function SalinityCalculator() {
       )}
 
       {error && (
-        <Box
-          bg="red.subtle"
-          borderRadius="xl"
-          px={5}
-          py={4}
-          borderWidth="1px"
-          borderColor="red.emphasized"
-        >
-          <Text fontWeight="semibold" color="red.fg" mb={1}>
-            Calculation failed
-          </Text>
-          <Text color="red.fg" fontSize="sm">
-            {error}
-          </Text>
-        </Box>
+        <Alert color="red" title="Calculation failed">
+          <Text size="sm">{error}</Text>
+        </Alert>
       )}
 
       {result && (
-        <Card.Root variant="elevated" bg="blue.subtle">
-          <Card.Body>
-            <Stat.Root>
-              <Stat.Label color="fg.muted" fontSize="sm">
+        <Card withBorder bg="blue.0">
+          <Card.Section p="md">
+            <Stack gap="xs">
+              <Text c="dimmed" size="sm">
                 Salt to add
-              </Stat.Label>
-              <Stat.ValueText fontSize="3xl" fontWeight="bold" color="fg.default">
+              </Text>
+              <Text size="2rem" fw={700}>
                 {formatDoseResult(result)}
-              </Stat.ValueText>
-              <Stat.HelpText color="fg.muted" fontSize="xs" mt={1}>
+              </Text>
+              <Text c="dimmed" size="xs">
                 For {values.volume} L · {values.current} → {values.target} ‰
-              </Stat.HelpText>
-            </Stat.Root>
-          </Card.Body>
-        </Card.Root>
+              </Text>
+            </Stack>
+          </Card.Section>
+        </Card>
       )}
     </Stack>
   )

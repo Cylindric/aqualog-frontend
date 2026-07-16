@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import '@mantine/core/styles.css'
 import { Provider } from './components/ui/provider'
 import App from './App'
 import { OidcProvider } from './auth/OidcProvider'

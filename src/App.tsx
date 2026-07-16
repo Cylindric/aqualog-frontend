@@ -1,5 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router'
-import { Button, Heading, Stack, Text } from '@chakra-ui/react'
+import { Button, Stack, Text, Title } from '@mantine/core'
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from 'react-oidc-context'
@@ -52,7 +52,7 @@ function AuthenticatedApp() {
         title="Authentication failed"
         body={auth.error.message}
         action={
-          <Button colorPalette="blue" onClick={() => void auth.signinRedirect()}>
+          <Button onClick={() => void auth.signinRedirect()}>
             Sign in again
           </Button>
         }
@@ -88,9 +88,9 @@ interface AuthStatusProps {
 
 function AuthStatus({ title, body, action }: AuthStatusProps) {
   return (
-    <Stack maxW="480px" mx="auto" mt={12} px={6} gap={4}>
-      <Heading size="md">{title}</Heading>
-      <Text color="fg.muted" fontSize="sm">
+    <Stack gap="md" maw={480} mx="auto" mt="xl" px="md">
+      <Title order={3}>{title}</Title>
+      <Text c="dimmed" size="sm">
         {body}
       </Text>
       {action}
