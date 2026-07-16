@@ -6,6 +6,8 @@ import { useAuth } from 'react-oidc-context'
 import { Shell } from './components/Shell'
 import { ConfigErrorPage } from './pages/ConfigErrorPage'
 import { CalculatorPage } from './pages/CalculatorPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { AquariumsPage } from './pages/AquariumsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { isConfigured } from './config'
 import { AuthTokenBridge } from './auth/OidcProvider'
@@ -67,7 +69,10 @@ function AuthenticatedApp() {
       <AuthTokenBridge />
       <Shell>
         <Routes>
-          <Route path="/" element={<CalculatorPage />} />
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/calculator" element={<CalculatorPage />} />
+          <Route path="/aquariums" element={<AquariumsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Shell>

@@ -16,7 +16,7 @@ def _runtime_config() -> dict[str, str]:
     return {
         key: value
         for key, value in os.environ.items()
-        if key.startswith("VITE_") and value is not None
+        if key.startswith("AQUALOG_") and value is not None
     }
 
 @app.get("/api/runtime-config")

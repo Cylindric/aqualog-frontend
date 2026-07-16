@@ -10,7 +10,7 @@ export function AuthCallbackPage() {
 
   useEffect(() => {
     if (auth.isAuthenticated) {
-      navigate('/', { replace: true })
+      navigate('/dashboard', { replace: true })
     }
   }, [auth.isAuthenticated, navigate])
 

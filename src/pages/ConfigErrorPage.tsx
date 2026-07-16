@@ -12,7 +12,7 @@ export function ConfigErrorPage() {
       <Text color="fg.muted" mb={4} fontSize="sm">
         The application cannot start because runtime configuration could not be loaded.
         Ensure the backend <Code>/api/runtime-config</Code> endpoint is reachable and
-        provides the required <Code>VITE_*</Code> values.
+        provides the required <Code>AQUALOG_*</Code> values.
       </Text>
       <Stack gap={2}>
         {errors.map((err) => (

@@ -10,19 +10,19 @@ This frontend uses OpenID Connect Authorization Code Flow with PKCE against Auth
 Configure environment variables in `.env.local` (copy from `.env.example`):
 
 ```bash
-VITE_API_BASE_URL=https://aqualog.home.cylindric.net
-VITE_OIDC_AUTHORITY=https://auth.aqualog.home.cylindric.net/application/o/aqualog-spa/
-VITE_OIDC_CLIENT_ID=doc-replace-with-aqualog-spa-client-id
-VITE_OIDC_REDIRECT_URI=https://aqualog.home.cylindric.net/auth/callback
-VITE_OIDC_POST_LOGOUT_REDIRECT_URI=https://aqualog.home.cylindric.net
-VITE_OIDC_SCOPE="openid profile email offline_access"
+AQUALOG_API_BASE_URL=https://aqualog.home.cylindric.net
+AQUALOG_OAUTH_ISSUER_URL=https://auth.aqualog.home.cylindric.net/application/o/aqualog-spa/
+AQUALOG_OAUTH_CLIENT_ID=doc-replace-with-aqualog-spa-client-id
+AQUALOG_OAUTH_AUTH_CALLBACK_URL=https://aqualog.home.cylindric.net/auth/callback
+AQUALOG_OAUTH_AUTH_LOGOUT_URL=https://aqualog.home.cylindric.net
+AQUALOG_OAUTH_SCOPE="openid profile email offline_access"
 ```
 
 Notes:
 
-- `VITE_OIDC_REDIRECT_URI` must exactly match the callback URL configured in Authentik.
-- `VITE_OIDC_POST_LOGOUT_REDIRECT_URI` must be allowed by Authentik for logout redirects.
-- `VITE_OIDC_SCOPE` should include API-required scopes in addition to `openid`.
+- `AQUALOG_OAUTH_AUTH_CALLBACK_URL` must exactly match the callback URL configured in Authentik.
+- `AQUALOG_OAUTH_AUTH_LOGOUT_URL` must be allowed by Authentik for logout redirects.
+- `AQUALOG_OAUTH_SCOPE` should include API-required scopes in addition to `openid`.
 
 ### 1. Install system packages
 

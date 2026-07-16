@@ -8,7 +8,7 @@ vars:
     sh: poetry run cz version --project --major
 
 dotenv:
-  - .env
+  - ../.env
 
 tasks:
   default:
@@ -24,18 +24,20 @@ tasks:
   build:
     desc: Build the project
     cmds:
-      - cmd: source .env && docker build -t {{.ContainerName}}:{{.Version}} .
+      - cmd: source .env && docker build -t {{.ContainerName}}:latest .
+      - cmd: docker image tag {{.ContainerName}}:latest {{.ContainerName}}:{{.Version}}
 
   run:
     desc: Run the project in a Docker container
     cmds:
       - cmd: |
           docker run --rm \
-          -e VITE_OIDC_AUTHORITY=${AQUALOG_OAUTH_ISSUER_URL} \
-          -e VITE_OIDC_CLIENT_ID=${AQUALOG_OAUTH_CLIENT_ID} \
-          -e VITE_OIDC_REDIRECT_URI=${VITE_OIDC_REDIRECT_URI} \
-          -e VITE_OIDC_LOGOUT_REDIRECT_URI=${VITE_OIDC_POST_LOGOUT_REDIRECT_URI} \
-          -e VITE_OIDC_SCOPES='${VITE_OIDC_SCOPE}' \
+          -e AQUALOG_OAUTH_ISSUER_URL=${AQUALOG_OAUTH_ISSUER_URL} \
+          -e AQUALOG_OAUTH_CLIENT_ID=${AQUALOG_OAUTH_CLIENT_ID} \
+          -e AQUALOG_OAUTH_AUTH_CALLBACK_URL=${AQUALOG_OAUTH_AUTH_CALLBACK_URL} \
+          -e AQUALOG_OAUTH_SCOPES='${AQUALOG_OAUTH_SCOPE}' \
+          -e AQUALOG_API_BASE_URL=${AQUALOG_API_BASE_URL} \
+          -e AQUALOG_OAUTH_AUTH_LOGOUT_URL=${AQUALOG_OAUTH_AUTH_LOGOUT_URL} \
           -p 9000:8000 \
           {{.ContainerName}}:{{.Version}}
 
@@ -57,36 +59,21 @@ tasks:
           --cache-dir /tmp/trivy \
           {{.ContainerName}}:{{.Version}}
 
-  up:
-    desc: Build and start the frontend service with docker-compose
-    interactive: true
-    silent: true
-    env:
-      AQUALOG_APP_ENV: "{{.AQUALOG_APP_ENV}}"
-      AQUALOG_OAUTH_ISSUER_URL: "{{.VITE_OIDC_AUTHORITY}}"
-      AQUALOG_OAUTH_AUDIENCE: "{{.VITE_OIDC_CLIENT_ID}}"
-      REQUESTS_CA_BUNDLE: "{{.CA_BUNDLE}}"
-      SSL_CERT_FILE: "{{.CA_BUNDLE}}"
-      CURL_CA_BUNDLE: "{{.CA_BUNDLE}}"
-    cmds:
-      - cmd: docker compose up
-
-  down:
-    desc: Stop docker-compose services for this project
-    cmds:
-      - cmd: docker compose down
-
   server:
     desc: Start the API server locally
     env:
-      AQUALOG_APP_ENV: "{{.AQUALOG_APP_ENV}}"
-      AQUALOG_OAUTH_ISSUER_URL: "{{.VITE_OIDC_AUTHORITY}}"
-      AQUALOG_OAUTH_AUDIENCE: "{{.VITE_OIDC_CLIENT_ID}}"
-      REQUESTS_CA_BUNDLE: "{{.CA_BUNDLE}}"
-      SSL_CERT_FILE: "{{.CA_BUNDLE}}"
-      CURL_CA_BUNDLE: "{{.CA_BUNDLE}}"
+      # AQUALOG_APP_ENV: "{{.AQUALOG_APP_ENV}}"
+      # AQUALOG_OAUTH_ISSUER_URL: "{{.AQUALOG_OAUTH_ISSUER_URL}}"
+      # AQUALOG_OAUTH_AUDIENCE: "{{.AQUALOG_OAUTH_CLIENT_ID}}"
+      # REQUESTS_CA_BUNDLE: "{{.CA_BUNDLE}}"
+      # SSL_CERT_FILE: "{{.CA_BUNDLE}}"
+      # CURL_CA_BUNDLE: "{{.CA_BUNDLE}}"
+      AQUALOG_OIDC_REDIRECT_URI: "http://localhost:${FRONTEND_PORT_HTTP}/auth/callback"
+      FRONTEND_DIR: ./dist
     cmds:
-      - cmd: uvicorn aqualog_api.app:create_app --reload --factory --host 0.0.0.0 --port 8000
+      - cmd: env | grep AQUALOG_
+      - cmd: npm run build
+      - cmd: "uvicorn backend.main:app --reload --host 0.0.0.0 --port ${FRONTEND_PORT_HTTP}"
 
   test:
     desc: Run the test suite with coverage summary and HTML test report

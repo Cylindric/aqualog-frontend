@@ -21,12 +21,12 @@ export const config: RuntimeConfig = {
 let loadError = ''
 
 interface RuntimeConfigResponse {
-  VITE_API_BASE_URL?: string
-  VITE_OIDC_AUTHORITY?: string
-  VITE_OIDC_CLIENT_ID?: string
-  VITE_OIDC_REDIRECT_URI?: string
-  VITE_OIDC_POST_LOGOUT_REDIRECT_URI?: string
-  VITE_OIDC_SCOPE?: string
+  AQUALOG_API_BASE_URL?: string
+  AQUALOG_OAUTH_ISSUER_URL?: string
+  AQUALOG_OAUTH_CLIENT_ID?: string
+  AQUALOG_OIDC_REDIRECT_URI?: string
+  AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI?: string
+  AQUALOG_OAUTH_SCOPE?: string
 }
 
 export async function loadRuntimeConfig(): Promise<void> {
@@ -57,12 +57,12 @@ export async function loadRuntimeConfig(): Promise<void> {
     return
   }
 
-  config.apiBaseUrl = payload.VITE_API_BASE_URL ?? ''
-  config.oidcAuthority = payload.VITE_OIDC_AUTHORITY ?? ''
-  config.oidcClientId = payload.VITE_OIDC_CLIENT_ID ?? ''
-  config.oidcRedirectUri = payload.VITE_OIDC_REDIRECT_URI ?? ''
-  config.oidcPostLogoutRedirectUri = payload.VITE_OIDC_POST_LOGOUT_REDIRECT_URI ?? ''
-  config.oidcScope = payload.VITE_OIDC_SCOPE ?? DEFAULT_SCOPE
+  config.apiBaseUrl = payload.AQUALOG_API_BASE_URL ?? ''
+  config.oidcAuthority = payload.AQUALOG_OAUTH_ISSUER_URL ?? ''
+  config.oidcClientId = payload.AQUALOG_OAUTH_CLIENT_ID ?? ''
+  config.oidcRedirectUri = payload.AQUALOG_OIDC_REDIRECT_URI?? ''
+  config.oidcPostLogoutRedirectUri = payload.AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI?? ''
+  config.oidcScope = payload.AQUALOG_OAUTH_SCOPE ?? DEFAULT_SCOPE
 }
 
 export function hasOidcConfig(): boolean {
@@ -82,11 +82,11 @@ export function isConfigured(): boolean {
 export function configErrors(): string[] {
   const errors: string[] = []
   if (loadError) errors.push(loadError)
-  if (!config.apiBaseUrl) errors.push('VITE_API_BASE_URL is not set')
-  if (!config.oidcAuthority) errors.push('VITE_OIDC_AUTHORITY is not set')
-  if (!config.oidcClientId) errors.push('VITE_OIDC_CLIENT_ID is not set')
-  if (!config.oidcRedirectUri) errors.push('VITE_OIDC_REDIRECT_URI is not set')
-  if (!config.oidcPostLogoutRedirectUri) errors.push('VITE_OIDC_POST_LOGOUT_REDIRECT_URI is not set')
-  if (!config.oidcScope) errors.push('VITE_OIDC_SCOPE is not set')
+  if (!config.apiBaseUrl) errors.push('AQUALOG_API_BASE_URL is not set')
+  if (!config.oidcAuthority) errors.push('AQUALOG_OAUTH_ISSUER_URL is not set')
+  if (!config.oidcClientId) errors.push('AQUALOG_OAUTH_CLIENT_ID is not set')
+  if (!config.oidcRedirectUri) errors.push('AQUALOG_OIDC_REDIRECT_URIis not set')
+  if (!config.oidcPostLogoutRedirectUri) errors.push('AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URIis not set')
+  if (!config.oidcScope) errors.push('AQUALOG_OAUTH_SCOPE is not set')
   return errors
 }

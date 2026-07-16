@@ -8,7 +8,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Calculator', icon: '⚗️' },
+  { to: '/dashboard', label: 'Dashboard', icon: '🏠' },
+  { to: '/calculator', label: 'Calculator', icon: '⚗️' },
+  { to: '/aquariums', label: 'Aquariums', icon: '🐠' },
 ]
 
 export function BottomNav() {
