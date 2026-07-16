@@ -3,7 +3,6 @@
 Users currently land directly on specific tools like the Salinity Calculator after authentication, with no central starting point or overview of available features. A dashboard homepage provides a clear entry point that improves discoverability and sets the foundation for future feature expansion.
 
 ## What Changes
-
 - Add a new Dashboard page component that serves as the default authenticated landing page
 - Create a dashboard route that displays after successful login
 - Implement a navigation button on the dashboard to access the Salinity Calculator

@@ -1,4 +1,4 @@
-import { Box, Button, Container, Grid, Heading, Stack, Text } from '@chakra-ui/react'
+import { Box, Button, Grid, SimpleGrid, Stack, Text, Title } from '@mantine/core'
 import { useNavigate } from 'react-router'
 
 interface FeatureCard {
@@ -21,62 +21,51 @@ export function DashboardPage() {
   const navigate = useNavigate()
 
   return (
-    <Container maxW="container.xl" py={8}>
-      <Stack gap={8}>
+    <Box maw={1200} mx="auto" py="xl">
+      <Stack gap="xl">
         {/* Header */}
         <Box>
-          <Heading size="2xl" mb={2}>
+          <Title order={1} mb="xs">
             Dashboard
-          </Heading>
-          <Text color="fg.muted" fontSize="lg">
+          </Title>
+          <Text c="dimmed" size="lg">
             Welcome to your aquarium management portal
           </Text>
         </Box>
 
         {/* Feature Cards Grid */}
-        <Grid
-          templateColumns={{
-            base: '1fr',
-            sm: 'repeat(2, 1fr)',
-            md: 'repeat(3, 1fr)',
-          }}
-          gap={4}
-        >
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
           {FEATURES.map((feature) => (
             <Button
               key={feature.route}
               onClick={() => navigate(feature.route)}
-              height="auto"
-              py={6}
-              px={5}
-              flexDirection="column"
-              alignItems="flex-start"
-              gap={3}
-              bg="bg.surface"
-              borderWidth="1px"
-              borderColor="border.subtle"
-              rounded="lg"
-              _hover={{
-                borderColor: 'colorPalette.500',
-                bg: 'bg.subtle',
-              }}
-              colorPalette="blue"
+              variant="default"
+              justify="flex-start"
+              h="auto"
+              p="lg"
+              style={{ border: '1px solid var(--mantine-color-gray-3)' }}
             >
-              <Text fontSize="3xl" lineHeight="1">
-                {feature.icon}
-              </Text>
-              <Stack gap={1} alignItems="flex-start">
-                <Text fontSize="lg" fontWeight="semibold" color="fg">
-                  {feature.title}
-                </Text>
-                <Text fontSize="sm" color="fg.muted" textAlign="left">
-                  {feature.description}
-                </Text>
-              </Stack>
+              <Grid gutter="md" align="flex-start">
+                <Grid.Col span={12}>
+                  <Text size="3xl" lh={1}>
+                    {feature.icon}
+                  </Text>
+                </Grid.Col>
+                <Grid.Col span={12}>
+                  <Stack gap="xs" align="flex-start">
+                    <Text size="lg" fw={600} ta="left">
+                      {feature.title}
+                    </Text>
+                    <Text size="sm" c="dimmed" ta="left">
+                      {feature.description}
+                    </Text>
+                  </Stack>
+                </Grid.Col>
+              </Grid>
             </Button>
           ))}
-        </Grid>
+        </SimpleGrid>
       </Stack>
-    </Container>
+    </Box>
   )
 }

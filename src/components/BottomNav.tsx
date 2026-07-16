@@ -1,4 +1,4 @@
-import { Box, Flex, Text } from '@chakra-ui/react'
+import { Box, Flex, Text } from '@mantine/core'
 import { NavLink } from 'react-router'
 
 interface NavItem {
@@ -16,33 +16,31 @@ const NAV_ITEMS: NavItem[] = [
 export function BottomNav() {
   return (
     <Box
-      as="nav"
-      position="fixed"
+      component="nav"
+      pos="fixed"
       bottom={0}
       left={0}
       right={0}
-      bg="bg.surface"
-      borderTopWidth="1px"
-      borderTopColor="border.subtle"
+      bg="var(--mantine-color-body)"
+      style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}
     >
-      <Flex h="16" justify="space-around" align="center">
+      <Flex h="64px" justify="space-around" align="center">
         {NAV_ITEMS.map((item) => (
           <NavLink key={item.to} to={item.to} end>
             {({ isActive }) => (
               <Flex
                 direction="column"
                 align="center"
-                gap={0.5}
-                px={4}
-                py={1}
-                color={isActive ? 'colorPalette.500' : 'fg.muted'}
-                colorPalette="blue"
-                transition="color 0.15s"
+                gap="2px"
+                px="md"
+                py="4px"
+                c={isActive ? 'blue.6' : 'dimmed'}
+                style={{ transition: 'color 0.15s' }}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
               >
-                <Text fontSize="xl" lineHeight="1">{item.icon}</Text>
-                <Text fontSize="xs" fontWeight={isActive ? 'semibold' : 'normal'}>
+                <Text size="xl" lh={1}>{item.icon}</Text>
+                <Text size="xs" fw={isActive ? 600 : 400}>
                   {item.label}
                 </Text>
               </Flex>

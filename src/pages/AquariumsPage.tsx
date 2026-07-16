@@ -4,15 +4,16 @@ import {
   Button,
   Drawer,
   Flex,
-  Heading,
-  IconButton,
+  Group,
+  NumberInput,
+  Select,
   Stack,
   Table,
   Text,
-} from '@chakra-ui/react'
-import { Field } from '@chakra-ui/react'
+  TextInput,
+  Title,
+} from '@mantine/core'
 
-// Mock data type
 interface Aquarium {
   id: string
   name: string
@@ -22,7 +23,6 @@ interface Aquarium {
   setupDate: string
 }
 
-// Mock data
 const MOCK_AQUARIUMS: Aquarium[] = [
   {
     id: '1',
@@ -71,198 +71,125 @@ export function AquariumsPage() {
   }
 
   return (
-    <Stack gap={4} pb={20}>
-      {/* Header */}
+    <Stack gap="md" pb="80px">
       <Flex justify="space-between" align="center">
-        <Heading size="lg">My Aquariums</Heading>
-        <Button colorPalette="blue" onClick={handleAdd}>
-          Add Aquarium
-        </Button>
+        <Title order={2}>My Aquariums</Title>
+        <Button onClick={handleAdd}>Add Aquarium</Button>
       </Flex>
 
-      {/* Empty state */}
       {aquariums.length === 0 ? (
         <Box
-          py={12}
-          px={4}
-          textAlign="center"
-          borderWidth="1px"
-          borderStyle="dashed"
-          borderColor="border.subtle"
-          rounded="lg"
+          py="xl"
+          px="md"
+          ta="center"
+          style={{
+            border: '1px dashed var(--mantine-color-gray-4)',
+            borderRadius: 'var(--mantine-radius-md)',
+          }}
         >
-          <Text fontSize="lg" fontWeight="medium" mb={2}>
+          <Text size="lg" fw={500} mb="xs">
             No aquariums yet
           </Text>
-          <Text color="fg.muted" mb={4}>
+          <Text c="dimmed" mb="md">
             Add your first aquarium to start tracking maintenance and parameters
           </Text>
-          <Button colorPalette="blue" onClick={handleAdd}>
-            Add Your First Aquarium
-          </Button>
+          <Button onClick={handleAdd}>Add Your First Aquarium</Button>
         </Box>
       ) : (
-        /* Table */
-        <Table.Root size="sm" variant="outline">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeader>Name</Table.ColumnHeader>
-              <Table.ColumnHeader>Type</Table.ColumnHeader>
-              <Table.ColumnHeader>Volume</Table.ColumnHeader>
-              <Table.ColumnHeader hideBelow="md">Setup Date</Table.ColumnHeader>
-              <Table.ColumnHeader w="20" />
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
+        <Table highlightOnHover withTableBorder>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Name</Table.Th>
+              <Table.Th>Type</Table.Th>
+              <Table.Th>Volume</Table.Th>
+              <Table.Th visibleFrom="md">Setup Date</Table.Th>
+              <Table.Th />
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {aquariums.map((aquarium) => (
-              <Table.Row key={aquarium.id}>
-                <Table.Cell fontWeight="medium">{aquarium.name}</Table.Cell>
-                <Table.Cell hideBelow="sm">{aquarium.type}</Table.Cell>
-                <Table.Cell>
+              <Table.Tr key={aquarium.id}>
+                <Table.Td fw={500}>{aquarium.name}</Table.Td>
+                <Table.Td visibleFrom="sm">{aquarium.type}</Table.Td>
+                <Table.Td>
                   {aquarium.volume} {aquarium.volumeUnit}
-                </Table.Cell>
-                <Table.Cell hideBelow="md">
+                </Table.Td>
+                <Table.Td visibleFrom="md">
                   {new Date(aquarium.setupDate).toLocaleDateString()}
-                </Table.Cell>
-                <Table.Cell>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleEdit(aquarium)}
-                  >
+                </Table.Td>
+                <Table.Td>
+                  <Button size="compact-sm" variant="subtle" onClick={() => handleEdit(aquarium)}>
                     Edit
                   </Button>
-                </Table.Cell>
-              </Table.Row>
+                </Table.Td>
+              </Table.Tr>
             ))}
-          </Table.Body>
-        </Table.Root>
+          </Table.Tbody>
+        </Table>
       )}
 
-      {/* Drawer for Add/Edit */}
-      <Drawer.Root
-        open={drawerOpen}
-        onOpenChange={(e) => !e.open && handleCloseDrawer()}
-        placement="end"
+      <Drawer
+        opened={drawerOpen}
+        onClose={handleCloseDrawer}
+        position="right"
         size="md"
+        title={selectedAquarium ? 'Edit Aquarium' : 'Add Aquarium'}
       >
-        <Drawer.Backdrop />
-        <Drawer.Positioner>
-          <Drawer.Content>
-            <Drawer.Header>
-              <Drawer.Title>
-                {selectedAquarium ? 'Edit Aquarium' : 'Add Aquarium'}
-              </Drawer.Title>
-              <Drawer.CloseTrigger asChild>
-                <IconButton variant="ghost" size="sm">
-                  ✕
-                </IconButton>
-              </Drawer.CloseTrigger>
-            </Drawer.Header>
+        <Stack gap="md">
+          <TextInput
+            label="Aquarium Name"
+            placeholder="e.g., Living Room Reef"
+            defaultValue={selectedAquarium?.name}
+            description="Give your aquarium a memorable name"
+          />
 
-            <Drawer.Body>
-              <Stack gap={4}>
-                <Field.Root>
-                  <Field.Label>Aquarium Name</Field.Label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Living Room Reef"
-                    defaultValue={selectedAquarium?.name}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem',
-                      borderRadius: '0.375rem',
-                      border: '1px solid var(--chakra-colors-border-subtle)',
-                    }}
-                  />
-                  <Field.HelperText>
-                    Give your aquarium a memorable name
-                  </Field.HelperText>
-                </Field.Root>
+          <Select
+            label="Type"
+            placeholder="Select type..."
+            defaultValue={selectedAquarium?.type}
+            data={[
+              'Saltwater Reef',
+              'Saltwater FOWLR',
+              'Freshwater Planted',
+              'Freshwater Community',
+            ]}
+          />
 
-                <Field.Root>
-                  <Field.Label>Type</Field.Label>
-                  <select
-                    defaultValue={selectedAquarium?.type}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem',
-                      borderRadius: '0.375rem',
-                      border: '1px solid var(--chakra-colors-border-subtle)',
-                    }}
-                  >
-                    <option value="">Select type...</option>
-                    <option value="Saltwater Reef">Saltwater Reef</option>
-                    <option value="Saltwater FOWLR">Saltwater FOWLR</option>
-                    <option value="Freshwater Planted">Freshwater Planted</option>
-                    <option value="Freshwater Community">
-                      Freshwater Community
-                    </option>
-                  </select>
-                </Field.Root>
+          <Group align="end" grow>
+            <NumberInput
+              label="Volume"
+              placeholder="75"
+              defaultValue={selectedAquarium?.volume}
+              allowNegative={false}
+              clampBehavior="none"
+            />
 
-                <Flex gap={2}>
-                  <Field.Root flex={2}>
-                    <Field.Label>Volume</Field.Label>
-                    <input
-                      type="number"
-                      placeholder="75"
-                      defaultValue={selectedAquarium?.volume}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        borderRadius: '0.375rem',
-                        border: '1px solid var(--chakra-colors-border-subtle)',
-                      }}
-                    />
-                  </Field.Root>
+            <Select
+              label="Unit"
+              defaultValue={selectedAquarium?.volumeUnit}
+              data={[
+                { label: 'gal', value: 'gallons' },
+                { label: 'L', value: 'liters' },
+              ]}
+            />
+          </Group>
 
-                  <Field.Root flex={1}>
-                    <Field.Label>Unit</Field.Label>
-                    <select
-                      defaultValue={selectedAquarium?.volumeUnit}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        borderRadius: '0.375rem',
-                        border: '1px solid var(--chakra-colors-border-subtle)',
-                      }}
-                    >
-                      <option value="gallons">gal</option>
-                      <option value="liters">L</option>
-                    </select>
-                  </Field.Root>
-                </Flex>
+          <TextInput
+            label="Setup Date"
+            type="date"
+            defaultValue={selectedAquarium?.setupDate}
+          />
 
-                <Field.Root>
-                  <Field.Label>Setup Date</Field.Label>
-                  <input
-                    type="date"
-                    defaultValue={selectedAquarium?.setupDate}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem',
-                      borderRadius: '0.375rem',
-                      border: '1px solid var(--chakra-colors-border-subtle)',
-                    }}
-                  />
-                </Field.Root>
-              </Stack>
-            </Drawer.Body>
-
-            <Drawer.Footer>
-              <Flex gap={2} width="full">
-                <Button flex={1} variant="outline" onClick={handleCloseDrawer}>
-                  Cancel
-                </Button>
-                <Button flex={1} colorPalette="blue" onClick={handleCloseDrawer}>
-                  {selectedAquarium ? 'Save Changes' : 'Add Aquarium'}
-                </Button>
-              </Flex>
-            </Drawer.Footer>
-          </Drawer.Content>
-        </Drawer.Positioner>
-      </Drawer.Root>
+          <Group grow>
+            <Button variant="default" onClick={handleCloseDrawer}>
+              Cancel
+            </Button>
+            <Button onClick={handleCloseDrawer}>
+              {selectedAquarium ? 'Save Changes' : 'Add Aquarium'}
+            </Button>
+          </Group>
+        </Stack>
+      </Drawer>
     </Stack>
   )
 }

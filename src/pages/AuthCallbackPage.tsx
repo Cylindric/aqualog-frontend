@@ -1,4 +1,4 @@
-import { Box, Button, Heading, Stack, Text } from '@chakra-ui/react'
+import { Box, Button, Stack, Text, Title } from '@mantine/core'
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from 'react-oidc-context'
@@ -24,7 +24,7 @@ export function AuthCallbackPage() {
         title="Sign-in failed"
         body={auth.error.message}
         actions={
-          <Button colorPalette="blue" onClick={() => void auth.signinRedirect()}>
+          <Button onClick={() => void auth.signinRedirect()}>
             Try sign-in again
           </Button>
         }
@@ -37,7 +37,7 @@ export function AuthCallbackPage() {
       title="Authentication required"
       body="Your session could not be restored from the callback URL."
       actions={
-        <Button colorPalette="blue" onClick={() => void auth.signinRedirect()}>
+        <Button onClick={() => void auth.signinRedirect()}>
           Sign in
         </Button>
       }
@@ -53,10 +53,10 @@ interface AuthMessageProps {
 
 function AuthMessage({ title, body, actions }: AuthMessageProps) {
   return (
-    <Box maxW="480px" mx="auto" mt={12} px={6}>
-      <Stack gap={4}>
-        <Heading size="md">{title}</Heading>
-        <Text color="fg.muted" fontSize="sm">
+    <Box maw={480} mx="auto" mt="xl" px="md">
+      <Stack gap="md">
+        <Title order={3}>{title}</Title>
+        <Text c="dimmed" size="sm">
           {body}
         </Text>
         {actions}
