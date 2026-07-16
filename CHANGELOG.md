@@ -1,3 +1,9 @@
+## 1.1.1 (2026-07-16)
+
+### Fix
+
+- normalise environment settings
+
 ## 1.1.0 (2026-07-12)
 
 ### Feat
