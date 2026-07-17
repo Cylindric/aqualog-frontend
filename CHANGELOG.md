@@ -1,3 +1,9 @@
+## 1.2.2 (2026-07-17)
+
+### Fix
+
+- add container-build to action
+
 ## 1.2.1 (2026-07-17)
 
 ### Fix
