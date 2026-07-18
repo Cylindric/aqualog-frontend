@@ -50,6 +50,12 @@
 
 - **frontend**: return missing files
 
+## v1.2.8 (2026-07-18)
+
+### Fix
+
+- bump commitizen from 4.16.4 to 4.16.5
+
 ## v1.2.7 (2026-07-18)
 
 ### Fix
