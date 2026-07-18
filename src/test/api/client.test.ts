@@ -152,6 +152,22 @@ describe('apiGet', () => {
     })
   })
 
+  it('uses raw response body message when 422 payload is not structured detail list', async () => {
+    const { apiPost } = await import('../../api/client')
+    setAccessTokenProvider(() => 'test-token')
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 422,
+      statusText: 'Unprocessable Entity',
+      text: async () => 'volume.unit must be one of: gal, L',
+    }))
+
+    await expect(apiPost('/api/v1/aquariums', {})).rejects.toMatchObject({
+      status: 422,
+      message: 'volume.unit must be one of: gal, L',
+    })
+  })
+
   it('throws ApiRequestError for other non-2xx responses', async () => {
     const { apiGet } = await import('../../api/client')
     setAccessTokenProvider(() => 'test-token')

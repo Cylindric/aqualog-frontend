@@ -1,15 +1,4 @@
-## ADDED Requirements
-
-### Requirement: Aquarium overview visibility
-The system SHALL provide an overview view summarizing the current aquarium status and pending routine actions.
-
-#### Scenario: User opens dashboard
-- **WHEN** a user navigates to the overview area
-- **THEN** the system presents aquarium summary information and highlights pending or overdue tasks
-
-#### Scenario: Empty-state guidance
-- **WHEN** overview data is unavailable because no records exist yet
-- **THEN** the system shows clear empty-state guidance for creating initial records
+## MODIFIED Requirements
 
 ### Requirement: Management workflows for aquarium records
 The system SHALL allow users to create, view, update, and remove supported aquarium management records exposed by the backend API.
@@ -41,14 +30,3 @@ The system SHALL allow users to create, view, update, and remove supported aquar
 #### Scenario: Recoverable API failure during management operations
 - **WHEN** listing or mutating aquarium records fails due to connectivity, timeout, or non-success API response
 - **THEN** the system displays a user-visible recoverable error state and provides a retry path
-
-### Requirement: Maintenance activity tracking
-The system SHALL allow users to log routine maintenance activities and review recent maintenance history.
-
-#### Scenario: Log maintenance event
-- **WHEN** a user records a maintenance action
-- **THEN** the system stores the event through the API and adds it to maintenance history
-
-#### Scenario: Review recent maintenance
-- **WHEN** a user opens maintenance history
-- **THEN** the system shows recent events ordered from newest to oldest

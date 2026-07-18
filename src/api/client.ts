@@ -20,6 +20,15 @@ export class ApiRequestError extends Error {
   }
 }
 
+type ApiHttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+
+interface ApiRequestOptions {
+  method?: ApiHttpMethod
+  params?: Record<string, string>
+  body?: unknown
+  signal?: AbortSignal
+}
+
 export type AccessTokenProvider = () => string | null | Promise<string | null>
 export type RefreshAccessTokenProvider = () => string | null | Promise<string | null>
 
@@ -45,33 +54,35 @@ async function getAccessToken(): Promise<string> {
 // ─── HTTP client ─────────────────────────────────────────────────────────────
 
 /**
- * Performs an authenticated GET request against the configured API base URL.
+ * Performs an authenticated API request against the configured backend.
  * Throws ApiRequestError for non-2xx responses and TypeError for network failures.
  */
-export async function apiGet<T>(
+export async function apiRequest<T>(
   path: string,
-  params?: Record<string, string>,
-  signal?: AbortSignal,
+  options: ApiRequestOptions = {},
 ): Promise<T> {
+  const method = options.method ?? 'GET'
   const url = new URL(path, config.apiBaseUrl)
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
+  if (options.params) {
+    for (const [key, value] of Object.entries(options.params)) {
       url.searchParams.set(key, value)
     }
   }
 
   const timeoutSignal = AbortSignal.timeout(10_000)
-  const combinedSignal = signal
-    ? AbortSignal.any([signal, timeoutSignal])
+  const combinedSignal = options.signal
+    ? AbortSignal.any([options.signal, timeoutSignal])
     : timeoutSignal
 
   const runRequest = (token: string) =>
     fetch(url.toString(), {
-      method: 'GET',
+      method,
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',
+        ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
+      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
       signal: combinedSignal,
     })
 
@@ -101,10 +112,16 @@ export async function apiGet<T>(
 
   if (!response.ok) {
     if (response.status === 422) {
-      const body = (await response.json().catch(() => ({}))) as {
-        detail?: ValidationErrorItem[]
-      }
-      throw new ApiRequestError('Validation error', response.status, body.detail)
+      const rawBody = await readResponseBody(response)
+      const body = parsePossibleJson(rawBody)
+      const validationErrors = extractValidationErrors(body)
+      throw new ApiRequestError(
+        validationErrors?.length
+          ? validationErrors.map((item) => item.msg).join('; ')
+          : rawBody.trim() || 'Validation error',
+        response.status,
+        validationErrors,
+      )
     }
     throw new ApiRequestError(
       `Request failed: ${response.status} ${response.statusText}`,
@@ -112,7 +129,132 @@ export async function apiGet<T>(
     )
   }
 
+  if (response.status === 204) {
+    return undefined as T
+  }
+
   return response.json() as Promise<T>
+}
+
+async function readResponseBody(response: Response): Promise<string> {
+  const maybeResponse = response as Response & {
+    text?: () => Promise<string>
+    json?: () => Promise<unknown>
+  }
+
+  if (typeof maybeResponse.text === 'function') {
+    return maybeResponse.text().catch(() => '')
+  }
+
+  if (typeof maybeResponse.json === 'function') {
+    const jsonBody = await maybeResponse.json().catch(() => ({}))
+    return JSON.stringify(jsonBody)
+  }
+
+  return ''
+}
+
+function parsePossibleJson(raw: string): unknown {
+  if (!raw.trim()) {
+    return {}
+  }
+
+  try {
+    return JSON.parse(raw) as unknown
+  } catch {
+    return { detail: raw }
+  }
+}
+
+function extractValidationErrors(body: unknown): ValidationErrorItem[] | undefined {
+  if (typeof body !== 'object' || body === null) {
+    return undefined
+  }
+
+  const obj = body as Record<string, unknown>
+  const detail = obj.detail ?? obj.errors ?? obj.error
+
+  if (Array.isArray(detail)) {
+    const parsed = detail
+      .map((item) => {
+        if (typeof item !== 'object' || item === null) return null
+        const candidate = item as Record<string, unknown>
+
+        const loc = Array.isArray(candidate.loc)
+          ? candidate.loc.filter((entry): entry is string | number => typeof entry === 'string' || typeof entry === 'number')
+          : []
+
+        if (typeof candidate.msg !== 'string' || typeof candidate.type !== 'string') {
+          return null
+        }
+
+        return {
+          loc,
+          msg: candidate.msg,
+          type: candidate.type,
+        } satisfies ValidationErrorItem
+      })
+      .filter((item): item is ValidationErrorItem => item !== null)
+
+    return parsed.length > 0 ? parsed : undefined
+  }
+
+  if (typeof detail === 'string') {
+    return [{ loc: [], msg: detail, type: 'validation_error' }]
+  }
+
+  if (typeof obj.message === 'string') {
+    return [{ loc: [], msg: obj.message, type: 'validation_error' }]
+  }
+
+  if (typeof obj.error === 'string') {
+    return [{ loc: [], msg: obj.error, type: 'validation_error' }]
+  }
+
+  return undefined
+}
+
+/**
+ * Performs an authenticated GET request.
+ */
+export async function apiGet<T>(
+  path: string,
+  params?: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<T> {
+  return apiRequest<T>(path, { method: 'GET', params, signal })
+}
+
+/**
+ * Performs an authenticated POST request.
+ */
+export async function apiPost<T>(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  return apiRequest<T>(path, { method: 'POST', body, signal })
+}
+
+/**
+ * Performs an authenticated PATCH request.
+ */
+export async function apiPatch<T>(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  return apiRequest<T>(path, { method: 'PATCH', body, signal })
+}
+
+/**
+ * Performs an authenticated DELETE request.
+ */
+export async function apiDelete<T>(
+  path: string,
+  signal?: AbortSignal,
+): Promise<T> {
+  return apiRequest<T>(path, { method: 'DELETE', signal })
 }
 
 /**
