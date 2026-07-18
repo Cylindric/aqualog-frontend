@@ -50,6 +50,12 @@
 
 - **frontend**: return missing files
 
+## v1.2.6 (2026-07-18)
+
+### Fix
+
+- added favicon
+
 ## v1.2.5 (2026-07-17)
 
 ## v1.2.4 (2026-07-17)
