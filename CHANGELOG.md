@@ -50,6 +50,12 @@
 
 - **frontend**: return missing files
 
+## v1.2.10 (2026-07-18)
+
+### Fix
+
+- bump fastapi from 0.139.0 to 0.139.2
+
 ## v1.2.9 (2026-07-18)
 
 ### Fix
