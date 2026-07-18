@@ -1,3 +1,9 @@
+## v1.4.0 (2026-07-18)
+
+### Feat
+
+- aquarium creation and editing now in
+
 ## v1.3.0 (2026-07-18)
 
 ### Feat
