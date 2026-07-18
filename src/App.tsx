@@ -1,17 +1,32 @@
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { Button, Stack, Text, Title } from '@mantine/core'
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { Shell } from './components/Shell'
 import { ConfigErrorPage } from './pages/ConfigErrorPage'
-import { CalculatorPage } from './pages/CalculatorPage'
-import { DashboardPage } from './pages/DashboardPage'
-import { AquariumsPage } from './pages/AquariumsPage'
-import { NotFoundPage } from './pages/NotFoundPage'
 import { isConfigured } from './config'
 import { AuthTokenBridge } from './auth/OidcProvider'
-import { AuthCallbackPage } from './pages/AuthCallbackPage'
+
+const AuthCallbackPage = lazy(() =>
+  import('./pages/AuthCallbackPage').then((module) => ({ default: module.AuthCallbackPage })),
+)
+
+const DashboardPage = lazy(() =>
+  import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })),
+)
+
+const CalculatorPage = lazy(() =>
+  import('./pages/CalculatorPage').then((module) => ({ default: module.CalculatorPage })),
+)
+
+const AquariumsPage = lazy(() =>
+  import('./pages/AquariumsPage').then((module) => ({ default: module.AquariumsPage })),
+)
+
+const NotFoundPage = lazy(() =>
+  import('./pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage })),
+)
 
 export default function App() {
   if (!isConfigured()) {
@@ -20,10 +35,12 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        <Route path="*" element={<AuthenticatedApp />} />
-      </Routes>
+      <Suspense fallback={<AuthStatus title="Loading" body="Loading application..." />}>
+        <Routes>
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="*" element={<AuthenticatedApp />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }
