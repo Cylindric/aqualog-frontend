@@ -16,7 +16,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "commitizen (>=4.16.4,<4.17.0)"
+    "commitizen (>=4.16.5,<4.17.0)"
 ]
 
 [tool.poetry]
