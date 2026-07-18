@@ -1,3 +1,9 @@
+## v1.2.13 (2026-07-18)
+
+### Fix
+
+- limit runtime config to necessary values only
+
 ## v1.2.12 (2026-07-18)
 
 ### Fix
