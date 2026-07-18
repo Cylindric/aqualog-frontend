@@ -24,6 +24,8 @@ tasks:
   build:
     desc: Build the project
     cmds:
+      - cmd: npm ci
+      - cmd: npm run build
       - cmd: source .env && docker build -t {{.ContainerName}}:latest .
       - cmd: docker image tag {{.ContainerName}}:latest {{.ContainerName}}:{{.Version}}
 
@@ -72,6 +74,7 @@ tasks:
       FRONTEND_DIR: ./dist
     cmds:
       - cmd: env | grep AQUALOG_
+      - cmd: npm ci
       - cmd: npm run build
       - cmd: "uvicorn backend.main:app --reload --host 0.0.0.0 --port ${FRONTEND_PORT_HTTP}"
 

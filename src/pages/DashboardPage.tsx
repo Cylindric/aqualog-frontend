@@ -45,7 +45,7 @@ export function DashboardPage() {
               p="lg"
               style={{ border: '1px solid var(--mantine-color-gray-3)' }}
             >
-              <Grid gutter="md" align="flex-start">
+              <Grid gap="md" align="flex-start">
                 <Grid.Col span={12}>
                   <Text size="3xl" lh={1}>
                     {feature.icon}
