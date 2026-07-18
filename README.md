@@ -1,5 +1,8 @@
 # Aqualog Frontend
 
+[![Bump version](https://github.com/Cylindric/aqualog-frontend/actions/workflows/bumpversion.yaml/badge.svg)](https://github.com/Cylindric/aqualog-frontend/actions/workflows/bumpversion.yaml)
+[![Build container](https://github.com/Cylindric/aqualog-frontend/actions/workflows/build_container.yaml/badge.svg)](https://github.com/Cylindric/aqualog-frontend/actions/workflows/build_container.yaml)
+
 ## Dev Environment Setup
 
 This project is built with Vite, TypeScript, React, and Vitest. On a new Ubuntu machine, set up the environment from the repository root.
