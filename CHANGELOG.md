@@ -1,3 +1,9 @@
+## v1.3.0 (2026-07-18)
+
+### Feat
+
+- switch to new layout style
+
 ## v1.2.13 (2026-07-18)
 
 ### Fix
