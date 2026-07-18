@@ -1,3 +1,10 @@
+## v1.2.12 (2026-07-18)
+
+### Fix
+
+- removed unecessary vite.config.js
+- introduce lazy-loading for faster app load
+
 ## v1.2.11 (2026-07-18)
 
 ### Fix
