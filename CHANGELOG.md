@@ -50,6 +50,12 @@
 
 - **frontend**: return missing files
 
+## v1.2.7 (2026-07-18)
+
+### Fix
+
+- bump @mantine/core from 8.3.18 to 9.4.1
+
 ## v1.2.6 (2026-07-18)
 
 ### Fix
