@@ -61,7 +61,7 @@ tasks:
           --cache-dir /tmp/trivy \
           {{.ContainerName}}:{{.Version}}
 
-  server:
+  backend:
     desc: Start the API server locally
     env:
       # AQUALOG_APP_ENV: "{{.AQUALOG_APP_ENV}}"
@@ -70,13 +70,19 @@ tasks:
       # REQUESTS_CA_BUNDLE: "{{.CA_BUNDLE}}"
       # SSL_CERT_FILE: "{{.CA_BUNDLE}}"
       # CURL_CA_BUNDLE: "{{.CA_BUNDLE}}"
-      AQUALOG_OIDC_REDIRECT_URI: "http://localhost:${FRONTEND_PORT_HTTP}/auth/callback"
       FRONTEND_DIR: ./dist
     cmds:
       - cmd: env | grep AQUALOG_
       - cmd: npm ci
       - cmd: npm run build
       - cmd: "uvicorn backend.main:app --reload --host 0.0.0.0 --port ${FRONTEND_PORT_HTTP}"
+
+  frontend:
+    desc: Start the frontend server locally
+    cmds:
+      - cmd: env | grep AQUALOG_
+      - cmd: npm ci
+      - cmd: npm run dev
 
   test:
     desc: Run the test suite with coverage summary and HTML test report
