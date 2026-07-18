@@ -50,6 +50,12 @@
 
 - **frontend**: return missing files
 
+## v1.2.9 (2026-07-18)
+
+### Fix
+
+- Mantine 9 changes to grids
+
 ## v1.2.8 (2026-07-18)
 
 ### Fix
