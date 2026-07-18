@@ -50,6 +50,12 @@
 
 - **frontend**: return missing files
 
+## v1.2.11 (2026-07-18)
+
+### Fix
+
+- bump vite from 8.1.4 to 8.1.5
+
 ## v1.2.10 (2026-07-18)
 
 ### Fix
