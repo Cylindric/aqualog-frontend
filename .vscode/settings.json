@@ -1,7 +1,9 @@
 {
     "chat.tools.terminal.autoApprove": {
         "openspec": true,
-        "mkdir": true
+        "mkdir": true,
+        "curl": true,
+        "rg": true,
     },
     "python-envs.defaultEnvManager": "ms-python.python:poetry",
     "python-envs.defaultPackageManager": "ms-python.python:poetry"

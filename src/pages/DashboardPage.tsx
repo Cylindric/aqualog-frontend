@@ -15,6 +15,12 @@ const FEATURES: FeatureCard[] = [
     icon: '⚗️',
     route: '/calculator',
   },
+  {
+    title: 'Measurements',
+    description: 'Add salinity readings and review historical trends',
+    icon: '🧂',
+    route: '/measurements',
+  },
 ]
 
 export function DashboardPage() {

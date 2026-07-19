@@ -8,6 +8,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // Keep chart libs matched before the generic @mantine rule,
+          // otherwise they get folded into vendor-mantine.
+          if (id.includes('node_modules/@mantine/charts') || id.includes('node_modules/recharts')) {
+            return 'vendor-charts'
+          }
+
           if (id.includes('node_modules/@mantine/')) {
             return 'vendor-mantine'
           }
