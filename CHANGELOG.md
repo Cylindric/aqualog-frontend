@@ -1,3 +1,9 @@
+## v1.4.1 (2026-07-19)
+
+### Fix
+
+- update build pipeline with new scripts
+
 ## v1.4.0 (2026-07-18)
 
 ### Feat
