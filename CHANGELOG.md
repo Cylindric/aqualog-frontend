@@ -1,3 +1,9 @@
+## v1.5.0 (2026-07-19)
+
+### Feat
+
+- add initial new measurements UI
+
 ## v1.4.1 (2026-07-19)
 
 ### Fix

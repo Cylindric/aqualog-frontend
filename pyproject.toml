@@ -1,6 +1,6 @@
 [project]
 name = "frontend"
-version = "1.4.1"
+version = "1.5.0"
 description = "AquaLog Frontend"
 authors = [
     {name = "Cylindric",email = "mark@hanfordonline.co.uk"}
