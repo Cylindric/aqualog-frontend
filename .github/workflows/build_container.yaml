@@ -8,6 +8,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: aqualog-frontend
+  SERVICE_NAME: frontend
 
 jobs:
   build:
@@ -92,4 +93,4 @@ jobs:
 
       - name: Reload DigitalOcean Droplet
         run: |
-          ssh -i ~/.ssh/id_rsa root@${{ env.DROPLET_IP }} "/opt/aqualog/restart-${{ env.IMAGE_NAME }}.sh"
+          ssh -i ~/.ssh/id_rsa root@${{ env.DROPLET_IP }} "/opt/aqualog/service-restart.sh ${{ env.SERVICE_NAME }}"
