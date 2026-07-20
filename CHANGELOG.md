@@ -1,3 +1,9 @@
+## v1.6.0 (2026-07-20)
+
+### Feat
+
+- add user enrolment flows
+
 ## v1.5.0 (2026-07-19)
 
 ### Feat
