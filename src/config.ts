@@ -85,8 +85,8 @@ export function configErrors(): string[] {
   if (!config.apiBaseUrl) errors.push('AQUALOG_API_BASE_URL is not set')
   if (!config.oidcAuthority) errors.push('AQUALOG_OAUTH_ISSUER_URL is not set')
   if (!config.oidcClientId) errors.push('AQUALOG_OAUTH_CLIENT_ID is not set')
-  if (!config.oidcRedirectUri) errors.push('AQUALOG_OIDC_REDIRECT_URIis not set')
-  if (!config.oidcPostLogoutRedirectUri) errors.push('AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URIis not set')
+  if (!config.oidcRedirectUri) errors.push('AQUALOG_OIDC_REDIRECT_URI is not set')
+  if (!config.oidcPostLogoutRedirectUri) errors.push('AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI is not set')
   if (!config.oidcScope) errors.push('AQUALOG_OAUTH_SCOPE is not set')
   return errors
 }
