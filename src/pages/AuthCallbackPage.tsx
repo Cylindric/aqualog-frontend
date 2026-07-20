@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { useNavigate } from 'react-router'
+import { toAuthFailureGuidance } from '../auth/authErrorMessaging'
 
 export function AuthCallbackPage() {
   const auth = useAuth()
@@ -21,8 +22,8 @@ export function AuthCallbackPage() {
   if (auth.error) {
     return (
       <AuthMessage
-        title="Sign-in failed"
-        body={auth.error.message}
+        title="Authentication could not be completed"
+        body={toAuthFailureGuidance(auth.error.message)}
         actions={
           <Button onClick={() => void auth.signinRedirect()}>
             Try sign-in again

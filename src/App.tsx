@@ -7,6 +7,7 @@ import { Shell } from './components/Shell'
 import { ConfigErrorPage } from './pages/ConfigErrorPage'
 import { isConfigured } from './config'
 import { AuthTokenBridge } from './auth/OidcProvider'
+import { toAuthFailureGuidance } from './auth/authErrorMessaging'
 
 const AuthCallbackPage = lazy(() =>
   import('./pages/AuthCallbackPage').then((module) => ({ default: module.AuthCallbackPage })),
@@ -71,7 +72,7 @@ function AuthenticatedApp() {
     return (
       <AuthStatus
         title="Authentication failed"
-        body={auth.error.message}
+        body={toAuthFailureGuidance(auth.error.message)}
         action={
           <Button onClick={() => void auth.signinRedirect()}>
             Sign in again

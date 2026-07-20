@@ -16,16 +16,29 @@ Configure environment variables in `.env.local` (copy from `.env.example`):
 AQUALOG_API_BASE_URL=https://aqualog.home.cylindric.net
 AQUALOG_OAUTH_ISSUER_URL=https://auth.aqualog.home.cylindric.net/application/o/aqualog-spa/
 AQUALOG_OAUTH_CLIENT_ID=doc-replace-with-aqualog-spa-client-id
-AQUALOG_OAUTH_AUTH_CALLBACK_URL=https://aqualog.home.cylindric.net/auth/callback
-AQUALOG_OAUTH_AUTH_LOGOUT_URL=https://aqualog.home.cylindric.net
+AQUALOG_OIDC_REDIRECT_URI=https://aqualog.home.cylindric.net/auth/callback
+AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI=https://aqualog.home.cylindric.net
 AQUALOG_OAUTH_SCOPE="openid profile email offline_access"
 ```
 
 Notes:
 
-- `AQUALOG_OAUTH_AUTH_CALLBACK_URL` must exactly match the callback URL configured in Authentik.
-- `AQUALOG_OAUTH_AUTH_LOGOUT_URL` must be allowed by Authentik for logout redirects.
+- `AQUALOG_OIDC_REDIRECT_URI` must exactly match the callback URL configured in Authentik.
+- `AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI` must be allowed by Authentik for logout redirects.
 - `AQUALOG_OAUTH_SCOPE` should include API-required scopes in addition to `openid`.
+
+### Authentik Deployment Notes
+
+- Signup entry is provider-hosted. The application should not expose a separate create-account link.
+- For pre-release onboarding, configure Authentik enrollment for open signup.
+- Recommended baseline anti-abuse controls in Authentik: email verification and signup rate limiting.
+- Detailed step-by-step runbook: `docs/authentik-enrollment-runbook.md`.
+
+Common misconfiguration symptoms:
+
+- Missing or incorrect `AQUALOG_OIDC_REDIRECT_URI`: users cannot complete callback and are returned to authentication-required/error states.
+- Missing or incorrect `AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI`: sign-out completes at provider but fails to return users to the expected app location.
+- Issuer/client mismatch (`AQUALOG_OAUTH_ISSUER_URL`, `AQUALOG_OAUTH_CLIENT_ID`): provider sign-in fails or loops before session is established.
 
 ### 1. Install system packages
 
