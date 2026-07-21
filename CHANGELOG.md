@@ -1,3 +1,9 @@
+## v1.7.0 (2026-07-21)
+
+### Feat
+
+- small fix to measurement display
+
 ## v1.6.0 (2026-07-20)
 
 ### Feat
