@@ -16,6 +16,7 @@ import type { ReactNode } from 'react'
 import { NavLink } from 'react-router'
 import { useReadinessCheck } from '../hooks/useReadinessCheck'
 import { useAuth } from 'react-oidc-context'
+import { config } from '../config'
 import { PRIMARY_NAV_ITEMS } from './primaryNav'
 
 interface ShellProps {
@@ -74,6 +75,18 @@ export function Shell({ children }: ShellProps) {
           {state === 'ready' && children}
         </Box>
       </Flex>
+
+      <Box
+        component="footer"
+        py="6px"
+        px="md"
+        ta="center"
+        style={{ borderTop: '1px solid var(--mantine-color-gray-2)' }}
+      >
+        <Text size="xs" c="dimmed" data-testid="app-version-status">
+          Version: {config.appVersionDisplay}
+        </Text>
+      </Box>
     </Flex>
   )
 }
