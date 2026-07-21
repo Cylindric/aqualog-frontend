@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router'
 import { Provider } from '../../components/ui/provider'
 import { Shell } from '../../components/Shell'
+import { config } from '../../config'
 
 const readinessMock = vi.fn()
 const authMock = vi.fn()
@@ -36,6 +37,8 @@ function renderShell(initialPath = '/dashboard') {
 }
 
 beforeEach(() => {
+  config.appVersionDisplay = 'v1.6.0'
+
   readinessMock.mockReturnValue({
     state: 'ready',
     errorMessage: '',
@@ -91,5 +94,18 @@ describe('Shell navigation layout', () => {
     })
     renderShell('/dashboard')
     expect(screen.getByText(/could not connect to the backend/i)).toBeInTheDocument()
+  })
+
+  it('renders version status line with v-prefixed value', () => {
+    renderShell('/dashboard')
+
+    expect(screen.getByTestId('app-version-status')).toHaveTextContent('Version: v1.6.0')
+  })
+
+  it('renders unavailable fallback in status line', () => {
+    config.appVersionDisplay = 'unavailable'
+    renderShell('/dashboard')
+
+    expect(screen.getByTestId('app-version-status')).toHaveTextContent('Version: unavailable')
   })
 })

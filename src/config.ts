@@ -5,9 +5,11 @@ export interface RuntimeConfig {
   oidcRedirectUri: string
   oidcPostLogoutRedirectUri: string
   oidcScope: string
+  appVersionDisplay: string
 }
 
 const DEFAULT_SCOPE = 'openid profile email'
+const DEFAULT_VERSION_DISPLAY = 'unavailable'
 
 export const config: RuntimeConfig = {
   apiBaseUrl: '',
@@ -16,6 +18,7 @@ export const config: RuntimeConfig = {
   oidcRedirectUri: '',
   oidcPostLogoutRedirectUri: '',
   oidcScope: DEFAULT_SCOPE,
+  appVersionDisplay: DEFAULT_VERSION_DISPLAY,
 }
 
 let loadError = ''
@@ -27,6 +30,7 @@ interface RuntimeConfigResponse {
   AQUALOG_OIDC_REDIRECT_URI?: string
   AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI?: string
   AQUALOG_OAUTH_SCOPE?: string
+  AQUALOG_APP_VERSION?: string
 }
 
 export async function loadRuntimeConfig(): Promise<void> {
@@ -63,6 +67,16 @@ export async function loadRuntimeConfig(): Promise<void> {
   config.oidcRedirectUri = payload.AQUALOG_OIDC_REDIRECT_URI?? ''
   config.oidcPostLogoutRedirectUri = payload.AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI?? ''
   config.oidcScope = payload.AQUALOG_OAUTH_SCOPE ?? DEFAULT_SCOPE
+  config.appVersionDisplay = normalizeVersionDisplay(payload.AQUALOG_APP_VERSION)
+}
+
+function normalizeVersionDisplay(version: string | undefined): string {
+  const normalized = version?.trim()
+  if (!normalized) {
+    return DEFAULT_VERSION_DISPLAY
+  }
+
+  return normalized.startsWith('v') ? normalized : `v${normalized}`
 }
 
 export function hasOidcConfig(): boolean {

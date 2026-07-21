@@ -9,6 +9,7 @@ describe('runtime config loading', () => {
     config.oidcRedirectUri = ''
     config.oidcPostLogoutRedirectUri = ''
     config.oidcScope = ''
+    config.appVersionDisplay = ''
   })
 
   afterEach(() => {
@@ -25,6 +26,7 @@ describe('runtime config loading', () => {
         AQUALOG_OIDC_REDIRECT_URI: 'https://app.example.test/auth/callback',
         AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI: 'https://app.example.test',
         AQUALOG_OAUTH_SCOPE: 'openid profile email offline_access',
+        AQUALOG_APP_VERSION: 'v1.6.0',
       }),
     }))
 
@@ -36,6 +38,42 @@ describe('runtime config loading', () => {
     expect(config.oidcRedirectUri).toBe('https://app.example.test/auth/callback')
     expect(config.oidcPostLogoutRedirectUri).toBe('https://app.example.test')
     expect(config.oidcScope).toBe('openid profile email offline_access')
+    expect(config.appVersionDisplay).toBe('v1.6.0')
+  })
+
+  it('uses unavailable fallback when app version is missing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        AQUALOG_API_BASE_URL: 'https://api.example.test',
+        AQUALOG_OAUTH_ISSUER_URL: 'https://auth.example.test/application/o/aqualog-spa/',
+        AQUALOG_OAUTH_CLIENT_ID: 'client-123',
+        AQUALOG_OIDC_REDIRECT_URI: 'https://app.example.test/auth/callback',
+        AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI: 'https://app.example.test',
+      }),
+    }))
+
+    await loadRuntimeConfig()
+
+    expect(config.appVersionDisplay).toBe('unavailable')
+  })
+
+  it('preserves v prefix when already present in runtime config', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        AQUALOG_API_BASE_URL: 'https://api.example.test',
+        AQUALOG_OAUTH_ISSUER_URL: 'https://auth.example.test/application/o/aqualog-spa/',
+        AQUALOG_OAUTH_CLIENT_ID: 'client-123',
+        AQUALOG_OIDC_REDIRECT_URI: 'https://app.example.test/auth/callback',
+        AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI: 'https://app.example.test',
+        AQUALOG_APP_VERSION: 'v1.6.0',
+      }),
+    }))
+
+    await loadRuntimeConfig()
+
+    expect(config.appVersionDisplay).toBe('v1.6.0')
   })
 
   it('reports missing OIDC runtime keys with correct key names', () => {

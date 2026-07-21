@@ -20,7 +20,8 @@ def _runtime_config() -> dict[str, str]:
         "AQUALOG_OAUTH_CLIENT_ID",
         "AQUALOG_OIDC_REDIRECT_URI",
         "AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI",
-        "AQUALOG_OAUTH_SCOPE"
+        "AQUALOG_OAUTH_SCOPE",
+        "AQUALOG_APP_VERSION",
     ]
     return {
         key: value
