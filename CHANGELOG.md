@@ -1,3 +1,9 @@
+## v1.7.1 (2026-07-21)
+
+### Fix
+
+- add version string to bottom of page
+
 ## v1.7.0 (2026-07-21)
 
 ### Feat
