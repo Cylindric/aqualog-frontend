@@ -244,7 +244,10 @@ export function MeasurementsPage() {
                       type="datetime-local"
                       label="Measured At"
                       value={formValues.measuredAtLocal}
-                      onChange={(event) => setFormValues((current) => ({ ...current, measuredAtLocal: event.currentTarget.value }))}
+                      onChange={(event) => {
+                        const measuredAtLocal = event.currentTarget.value
+                        setFormValues((current) => ({ ...current, measuredAtLocal }))
+                      }}
                       error={formErrors.measuredAtLocal}
                       disabled={saving}
                     />
@@ -359,6 +362,27 @@ function SalinityTrendChart({ measurements }: { measurements: SalinityMeasuremen
     measuredAt: formatShortDate(item.measuredAt),
     salinity: item.value,
   }))
+  const optimalSalinity = 35
+  const lowerThreshold = 33
+  const upperThreshold = 37
+  const values = chartData.map((item) => item.salinity)
+  const yDomainMin = Math.min(lowerThreshold, ...values)
+  const yDomainMax = Math.max(upperThreshold, ...values)
+  const yRange = yDomainMax - yDomainMin
+
+  const offsetForValue = (value: number): number => {
+    if (yRange <= 0) return 50
+    return ((yDomainMax - value) / yRange) * 100
+  }
+
+  const thresholdGradientStops = [
+    { offset: 0, color: 'red.7' },
+    { offset: offsetForValue(upperThreshold), color: 'red.7' },
+    { offset: offsetForValue(optimalSalinity), color: 'green.6' },
+    { offset: offsetForValue(lowerThreshold), color: 'red.7' },
+    { offset: 100, color: 'red.7' },
+  ].sort((a, b) => a.offset - b.offset)
+
   const chartContainerRef = useRef<HTMLDivElement | null>(null)
   const [canRenderChart, setCanRenderChart] = useState(false)
 
@@ -395,7 +419,11 @@ function SalinityTrendChart({ measurements }: { measurements: SalinityMeasuremen
                 h={240}
                 data={chartData}
                 dataKey="measuredAt"
-                series={[{ name: 'salinity', label: 'Salinity', color: 'blue.6' }]}
+                type="gradient"
+                gradientStops={thresholdGradientStops}
+                yAxisProps={{ domain: [yDomainMin, yDomainMax] }}
+                referenceLines={[{ y: optimalSalinity, label: 'Optimal Salinity (35 ppt)', color: 'green.7' }]}
+                series={[{ name: 'salinity', label: 'Salinity' }]}
                 curveType="monotone"
                 withDots
                 withLegend
