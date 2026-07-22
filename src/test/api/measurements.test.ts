@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createSalinityMeasurement, listSalinityMeasurements } from '../../api/measurements'
+import {
+  createPhosphateMeasurement,
+  createSalinityMeasurement,
+  deleteMeasurement,
+  listPhosphateMeasurements,
+  listSalinityMeasurements,
+} from '../../api/measurements'
 import { setAccessTokenProvider, setRefreshAccessTokenProvider } from '../../api/client'
 
 vi.mock('../../config', () => ({
@@ -72,6 +78,48 @@ describe('measurements api', () => {
     expect(options.method).toBe('GET')
   })
 
+  it('lists phosphate measurements and maps ppm unit', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        request_id: 'req-ph-1',
+        data: [
+          {
+            id: 'm-ph-1',
+            aquarium_id: 'aq-1',
+            parameter: 'phosphate',
+            value: 0.08,
+            unit: 'ppm',
+            raw_value: 0.08,
+            raw_unit: 'ppm',
+            measured_at: '2026-07-19T10:00:00Z',
+            created_at: '2026-07-19T10:01:00Z',
+          },
+        ],
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(listPhosphateMeasurements('aq-1')).resolves.toEqual([
+      {
+        id: 'm-ph-1',
+        aquariumId: 'aq-1',
+        parameter: 'phosphate',
+        value: 0.08,
+        unit: 'ppm',
+        rawValue: 0.08,
+        rawUnit: 'ppm',
+        measuredAt: '2026-07-19T10:00:00Z',
+        createdAt: '2026-07-19T10:01:00Z',
+      },
+    ])
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/aquariums/aq-1/measurements/phosphate')
+  })
+
   it('creates salinity measurement with ppt unit payload', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -110,6 +158,68 @@ describe('measurements api', () => {
         measured_at: '2026-07-19T09:30:00Z',
       }),
     )
+  })
+
+  it('creates phosphate measurement with ppm unit payload', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        success: true,
+        request_id: 'req-ph-2',
+        data: {
+          id: 'm-ph-2',
+          aquarium_id: 'aq-1',
+          parameter: 'phosphate',
+          value: 0.075,
+          unit: 'ppm',
+          raw_value: 0.075,
+          raw_unit: 'ppm',
+          measured_at: '2026-07-19T09:30:00Z',
+          created_at: '2026-07-19T09:31:00Z',
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      createPhosphateMeasurement('aq-1', {
+        value: 0.075,
+        measuredAt: '2026-07-19T09:30:00Z',
+      }),
+    ).resolves.toMatchObject({ id: 'm-ph-2', unit: 'ppm' })
+
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(options.method).toBe('POST')
+    expect(options.body).toBe(
+      JSON.stringify({
+        unit: 'ppm',
+        value: 0.075,
+        measured_at: '2026-07-19T09:30:00Z',
+      }),
+    )
+  })
+
+  it('deletes a measurement by parameter and id', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        request_id: 'req-del-1',
+        data: {
+          id: 'm-ph-2',
+          deleted: true,
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(deleteMeasurement('aq-1', 'phosphate', 'm-ph-2')).resolves.toBeUndefined()
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/aquariums/aq-1/measurements/phosphate/m-ph-2')
+    expect(options.method).toBe('DELETE')
   })
 
   it('does not retry create request on 422 validation error', async () => {
