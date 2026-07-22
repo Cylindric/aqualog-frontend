@@ -1,3 +1,9 @@
+## v1.8.0 (2026-07-22)
+
+### Feat
+
+- add Phosphate measurements
+
 ## v1.7.1 (2026-07-21)
 
 ### Fix
