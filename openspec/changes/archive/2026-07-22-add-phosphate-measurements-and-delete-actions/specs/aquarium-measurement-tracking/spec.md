@@ -1,7 +1,4 @@
-## Purpose
-Define measurement tracking behavior for aquarium salinity workflows, including measurement entry, history review, trend visualization, and Mantine 9 UI guardrails.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Users can add salinity measurements
 The system SHALL allow users to submit new aquarium measurements for supported parameters including salinity and phosphate, with salinity represented in ppt and phosphate represented in ppm.
@@ -55,10 +52,3 @@ The system SHALL provide parameter-specific visualizations of historical salinit
 #### Scenario: Visualization fallback for sparse or unavailable data
 - **WHEN** parameter visualization data is insufficient or rendering cannot be completed
 - **THEN** the system keeps measurement history accessible in non-visual form without blocking user workflows
-
-### Requirement: Measurement UI follows Mantine 9 component syntax
-The system SHALL implement measurement UI layout and components using Mantine 9 APIs and SHALL NOT use obsolete Mantine 8-only prop names.
-
-#### Scenario: Grid spacing uses Mantine 9 prop names
-- **WHEN** measurement UI layout uses Mantine `Grid`
-- **THEN** spacing uses Mantine 9 `gap`/`rowGap`/`columnGap` props and does not use obsolete `gutter`

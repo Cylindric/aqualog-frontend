@@ -1,25 +1,30 @@
-import { ApiRequestError, apiGet, apiPost } from './client'
+import { ApiRequestError, apiDelete, apiGet, apiPost } from './client'
 
-export type SalinityUnit = 'ppt'
+export type MeasurementParameter = 'salinity' | 'phosphate'
+export type MeasurementUnit = 'ppt' | 'ppm'
 
-export interface SalinityMeasurementRecord {
+export interface MeasurementRecord {
   id: string
   aquariumId: string
-  parameter: string
+  parameter: MeasurementParameter
   value: number
-  unit: SalinityUnit
+  unit: MeasurementUnit
   rawValue: number
   rawUnit: string
   measuredAt: string
   createdAt: string
 }
 
-export interface CreateSalinityMeasurementInput {
+export type SalinityMeasurementRecord = MeasurementRecord
+
+export interface CreateMeasurementInput {
   value: number
   measuredAt: string
 }
 
-interface SalinityMeasurementPayload {
+export type CreateSalinityMeasurementInput = CreateMeasurementInput
+
+interface MeasurementPayload {
   id: string
   aquarium_id: string
   parameter: string
@@ -31,64 +36,124 @@ interface SalinityMeasurementPayload {
   created_at: string
 }
 
-interface SalinityMeasurementResponse {
+interface MeasurementResponse {
   success: boolean
   request_id: string
-  data: SalinityMeasurementPayload
+  data: MeasurementPayload
 }
 
-interface SalinityMeasurementListResponse {
+interface MeasurementListResponse {
   success: boolean
   request_id: string
-  data: SalinityMeasurementPayload[]
+  data: MeasurementPayload[]
+}
+
+interface DeleteMeasurementResponse {
+  success: boolean
+  request_id: string
+  data: {
+    id: string
+    deleted: boolean
+  }
 }
 
 export async function listSalinityMeasurements(
   aquariumId: string,
   signal?: AbortSignal,
-): Promise<SalinityMeasurementRecord[]> {
-  const response = await apiGet<unknown>(
-    `/api/v1/aquariums/${aquariumId}/measurements/salinity`,
-    undefined,
-    signal,
-  )
+): Promise<MeasurementRecord[]> {
+  return listMeasurementsByParameter(aquariumId, 'salinity', signal)
+}
 
-  if (!isSalinityMeasurementListResponse(response)) {
-    throw new ApiRequestError('Received an unexpected salinity measurement list response shape from the API.', 502)
-  }
-
-  return response.data.map(toSalinityMeasurementRecord)
+export async function listPhosphateMeasurements(
+  aquariumId: string,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord[]> {
+  return listMeasurementsByParameter(aquariumId, 'phosphate', signal)
 }
 
 export async function createSalinityMeasurement(
   aquariumId: string,
   input: CreateSalinityMeasurementInput,
   signal?: AbortSignal,
-): Promise<SalinityMeasurementRecord> {
+): Promise<MeasurementRecord> {
+  return createMeasurementByParameter(aquariumId, 'salinity', 'ppt', input, signal)
+}
+
+export async function createPhosphateMeasurement(
+  aquariumId: string,
+  input: CreateMeasurementInput,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord> {
+  return createMeasurementByParameter(aquariumId, 'phosphate', 'ppm', input, signal)
+}
+
+export async function deleteMeasurement(
+  aquariumId: string,
+  parameter: MeasurementParameter,
+  measurementId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const response = await apiDelete<unknown>(
+    `/api/v1/aquariums/${aquariumId}/measurements/${parameter}/${measurementId}`,
+    signal,
+  )
+
+  if (!isDeleteMeasurementResponse(response)) {
+    throw new ApiRequestError('Received an unexpected measurement delete response shape from the API.', 502)
+  }
+}
+
+async function listMeasurementsByParameter(
+  aquariumId: string,
+  parameter: MeasurementParameter,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord[]> {
+  const response = await apiGet<unknown>(
+    `/api/v1/aquariums/${aquariumId}/measurements/${parameter}`,
+    undefined,
+    signal,
+  )
+
+  if (!isMeasurementListResponse(response)) {
+    throw new ApiRequestError(`Received an unexpected ${parameter} measurement list response shape from the API.`, 502)
+  }
+
+  return response.data.map(toMeasurementRecord)
+}
+
+async function createMeasurementByParameter(
+  aquariumId: string,
+  parameter: MeasurementParameter,
+  unit: MeasurementUnit,
+  input: CreateMeasurementInput,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord> {
   const response = await apiPost<unknown>(
-    `/api/v1/aquariums/${aquariumId}/measurements/salinity`,
+    `/api/v1/aquariums/${aquariumId}/measurements/${parameter}`,
     {
-      unit: 'ppt',
+      unit,
       value: input.value,
       measured_at: input.measuredAt,
     },
     signal,
   )
 
-  if (!isSalinityMeasurementResponse(response)) {
-    throw new ApiRequestError('Received an unexpected salinity measurement response shape from the API.', 502)
+  if (!isMeasurementResponse(response)) {
+    throw new ApiRequestError(`Received an unexpected ${parameter} measurement response shape from the API.`, 502)
   }
 
-  return toSalinityMeasurementRecord(response.data)
+  return toMeasurementRecord(response.data)
 }
 
-function toSalinityMeasurementRecord(payload: SalinityMeasurementPayload): SalinityMeasurementRecord {
+function toMeasurementRecord(payload: MeasurementPayload): MeasurementRecord {
+  const parameter = payload.parameter === 'phosphate' ? 'phosphate' : 'salinity'
+
   return {
     id: payload.id,
     aquariumId: payload.aquarium_id,
-    parameter: payload.parameter,
+    parameter,
     value: payload.value,
-    unit: payload.unit === 'ppt' ? 'ppt' : 'ppt',
+    unit: payload.unit === 'ppm' ? 'ppm' : 'ppt',
     rawValue: payload.raw_value,
     rawUnit: payload.raw_unit,
     measuredAt: payload.measured_at,
@@ -96,7 +161,7 @@ function toSalinityMeasurementRecord(payload: SalinityMeasurementPayload): Salin
   }
 }
 
-function isSalinityMeasurementPayload(input: unknown): input is SalinityMeasurementPayload {
+function isMeasurementPayload(input: unknown): input is MeasurementPayload {
   if (typeof input !== 'object' || input === null) return false
   const obj = input as Record<string, unknown>
 
@@ -113,18 +178,18 @@ function isSalinityMeasurementPayload(input: unknown): input is SalinityMeasurem
   )
 }
 
-function isSalinityMeasurementResponse(input: unknown): input is SalinityMeasurementResponse {
+function isMeasurementResponse(input: unknown): input is MeasurementResponse {
   if (typeof input !== 'object' || input === null) return false
   const obj = input as Record<string, unknown>
 
   return (
     typeof obj.success === 'boolean' &&
     typeof obj.request_id === 'string' &&
-    isSalinityMeasurementPayload(obj.data)
+    isMeasurementPayload(obj.data)
   )
 }
 
-function isSalinityMeasurementListResponse(input: unknown): input is SalinityMeasurementListResponse {
+function isMeasurementListResponse(input: unknown): input is MeasurementListResponse {
   if (typeof input !== 'object' || input === null) return false
   const obj = input as Record<string, unknown>
 
@@ -132,5 +197,15 @@ function isSalinityMeasurementListResponse(input: unknown): input is SalinityMea
     return false
   }
 
-  return obj.data.every((item) => isSalinityMeasurementPayload(item))
+  return obj.data.every((item) => isMeasurementPayload(item))
+}
+
+function isDeleteMeasurementResponse(input: unknown): input is DeleteMeasurementResponse {
+  if (typeof input !== 'object' || input === null) return false
+  const obj = input as Record<string, unknown>
+  if (typeof obj.success !== 'boolean' || typeof obj.request_id !== 'string') return false
+  if (typeof obj.data !== 'object' || obj.data === null) return false
+
+  const data = obj.data as Record<string, unknown>
+  return typeof data.id === 'string' && typeof data.deleted === 'boolean'
 }

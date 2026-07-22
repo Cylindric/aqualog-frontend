@@ -18,22 +18,33 @@ import {
 import { LineChart } from '@mantine/charts'
 import { type AquariumRecord, listAquariums } from '../api/aquariums'
 import {
+  createPhosphateMeasurement,
   createSalinityMeasurement,
+  deleteMeasurement,
+  listPhosphateMeasurements,
   listSalinityMeasurements,
-  type SalinityMeasurementRecord,
+  type MeasurementParameter,
+  type MeasurementRecord,
 } from '../api/measurements'
 import { ApiRequestError, toUserMessage } from '../api/client'
 
 type MeasurementsViewState = 'idle' | 'loading' | 'ready' | 'error'
 
 interface MeasurementFormValues {
-  value: number | ''
+  salinityValue: number | ''
+  phosphateValue: number | ''
   measuredAtLocal: string
+}
+
+interface LastDeleteAttempt {
+  id: string
+  parameter: MeasurementParameter
 }
 
 function defaultFormValues(): MeasurementFormValues {
   return {
-    value: '',
+    salinityValue: '',
+    phosphateValue: '',
     measuredAtLocal: new Date().toISOString().slice(0, 16),
   }
 }
@@ -45,7 +56,7 @@ export function MeasurementsPage() {
   const [aquariumsError, setAquariumsError] = useState('')
 
   const [viewState, setViewState] = useState<MeasurementsViewState>('idle')
-  const [measurements, setMeasurements] = useState<SalinityMeasurementRecord[]>([])
+  const [measurements, setMeasurements] = useState<MeasurementRecord[]>([])
   const [historyError, setHistoryError] = useState('')
 
   const [formValues, setFormValues] = useState<MeasurementFormValues>(defaultFormValues())
@@ -53,6 +64,10 @@ export function MeasurementsPage() {
   const [saving, setSaving] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [lastSubmit, setLastSubmit] = useState<MeasurementFormValues | null>(null)
+
+  const [deletingMeasurementId, setDeletingMeasurementId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState('')
+  const [lastDeleteAttempt, setLastDeleteAttempt] = useState<LastDeleteAttempt | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -82,6 +97,16 @@ export function MeasurementsPage() {
     [measurements],
   )
 
+  const salinityMeasurements = useMemo(
+    () => sortedMeasurements.filter((measurement) => measurement.parameter === 'salinity'),
+    [sortedMeasurements],
+  )
+
+  const phosphateMeasurements = useMemo(
+    () => sortedMeasurements.filter((measurement) => measurement.parameter === 'phosphate'),
+    [sortedMeasurements],
+  )
+
   const aquariumOptions = useMemo(
     () => aquariums.map((aquarium) => ({ value: aquarium.id, label: aquarium.name })),
     [aquariums],
@@ -99,6 +124,11 @@ export function MeasurementsPage() {
   const handleRetryCreate = () => {
     if (!selectedAquariumId || !lastSubmit) return
     void submitMeasurement(lastSubmit)
+  }
+
+  const handleRetryDelete = () => {
+    if (!selectedAquariumId || !lastDeleteAttempt) return
+    void handleDeleteMeasurement(lastDeleteAttempt.id, lastDeleteAttempt.parameter)
   }
 
   const handleFormSubmit = async () => {
@@ -122,21 +152,72 @@ export function MeasurementsPage() {
     setFormErrors({})
     setLastSubmit(values)
 
-    try {
-      await createSalinityMeasurement(selectedAquariumId, {
-        value: Number(values.value),
-        measuredAt: toIsoString(values.measuredAtLocal),
-      })
+    const nextErrors: Partial<Record<keyof MeasurementFormValues, string>> = {}
+    const failureMessages: string[] = []
+    let savedCount = 0
 
-      setFormValues(defaultFormValues())
-      await loadMeasurements(selectedAquariumId)
-    } catch (error) {
-      setSubmitError(toUserMessage(error))
-      if (error instanceof ApiRequestError && error.validationErrors?.length) {
-        setFormErrors(mapApiValidationErrors(error))
+    try {
+      if (values.salinityValue !== '') {
+        try {
+          await createSalinityMeasurement(selectedAquariumId, {
+            value: Number(values.salinityValue),
+            measuredAt: toIsoString(values.measuredAtLocal),
+          })
+          savedCount += 1
+        } catch (error) {
+          failureMessages.push(`Salinity: ${toUserMessage(error)}`)
+          if (error instanceof ApiRequestError && error.validationErrors?.length) {
+            Object.assign(nextErrors, mapApiValidationErrors(error, 'salinityValue'))
+          }
+        }
+      }
+
+      if (values.phosphateValue !== '') {
+        try {
+          await createPhosphateMeasurement(selectedAquariumId, {
+            value: Number(values.phosphateValue),
+            measuredAt: toIsoString(values.measuredAtLocal),
+          })
+          savedCount += 1
+        } catch (error) {
+          failureMessages.push(`Phosphate: ${toUserMessage(error)}`)
+          if (error instanceof ApiRequestError && error.validationErrors?.length) {
+            Object.assign(nextErrors, mapApiValidationErrors(error, 'phosphateValue'))
+          }
+        }
+      }
+
+      if (Object.keys(nextErrors).length > 0) {
+        setFormErrors(nextErrors)
+      }
+
+      if (savedCount > 0) {
+        setFormValues(defaultFormValues())
+        await loadMeasurements(selectedAquariumId)
+      }
+
+      if (failureMessages.length > 0) {
+        setSubmitError(failureMessages.join(' | '))
       }
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDeleteMeasurement(measurementId: string, parameter: MeasurementParameter) {
+    if (!selectedAquariumId) return
+
+    setDeletingMeasurementId(measurementId)
+    setDeleteError('')
+    setLastDeleteAttempt({ id: measurementId, parameter })
+
+    try {
+      await deleteMeasurement(selectedAquariumId, parameter, measurementId)
+      await loadMeasurements(selectedAquariumId)
+    } catch (error) {
+      setDeleteError(toUserMessage(error))
+    } finally {
+      setDeletingMeasurementId(null)
     }
   }
 
@@ -160,8 +241,12 @@ export function MeasurementsPage() {
     setHistoryError('')
 
     try {
-      const records = await listSalinityMeasurements(aquariumId, signal)
-      setMeasurements(records)
+      const [salinityRecords, phosphateRecords] = await Promise.all([
+        listSalinityMeasurements(aquariumId, signal),
+        listPhosphateMeasurements(aquariumId, signal),
+      ])
+
+      setMeasurements([...salinityRecords, ...phosphateRecords])
       setViewState('ready')
     } catch (error) {
       setHistoryError(toUserMessage(error))
@@ -172,9 +257,9 @@ export function MeasurementsPage() {
   return (
     <Stack gap="lg" pb="md">
       <Stack gap={2}>
-        <Title order={2}>Salinity Measurements</Title>
+        <Title order={2}>Aquarium Measurements</Title>
         <Text c="dimmed" size="sm">
-          Add salinity measurements in ppt and review historical trends for each aquarium.
+          Record salinity (ppt) and phosphate (ppm) values, review historical trends, and remove incorrect entries.
         </Text>
       </Stack>
 
@@ -205,7 +290,7 @@ export function MeasurementsPage() {
         >
           <Text fw={600} mb="xs">No aquariums available</Text>
           <Text c="dimmed" size="sm">
-            Add an aquarium in the Aquariums section before recording salinity measurements.
+            Add an aquarium in the Aquariums section before recording measurements.
           </Text>
         </Box>
       )}
@@ -224,13 +309,12 @@ export function MeasurementsPage() {
                 />
 
                 <Grid gap="md" align="end">
-                  <Grid.Col span={{ base: 12, sm: 4 }}>
+                  <Grid.Col span={{ base: 12, sm: 3 }}>
                     <NumberInput
                       label="Salinity (ppt)"
-                      description="Measurements in this iteration are stored in ppt"
-                      value={formValues.value}
-                      onChange={(value) => setFormValues((current) => ({ ...current, value: value === '' ? '' : Number(value) }))}
-                      error={formErrors.value}
+                      value={formValues.salinityValue}
+                      onChange={(value) => setFormValues((current) => ({ ...current, salinityValue: value === '' ? '' : Number(value) }))}
+                      error={formErrors.salinityValue}
                       decimalScale={2}
                       allowNegative={false}
                       min={0.01}
@@ -239,7 +323,21 @@ export function MeasurementsPage() {
                       disabled={saving}
                     />
                   </Grid.Col>
-                  <Grid.Col span={{ base: 12, sm: 5 }}>
+                  <Grid.Col span={{ base: 12, sm: 3 }}>
+                    <NumberInput
+                      label="Phosphate (ppm)"
+                      value={formValues.phosphateValue}
+                      onChange={(value) => setFormValues((current) => ({ ...current, phosphateValue: value === '' ? '' : Number(value) }))}
+                      error={formErrors.phosphateValue}
+                      decimalScale={3}
+                      allowNegative={false}
+                      min={0.001}
+                      clampBehavior="none"
+                      placeholder="e.g. 0.075"
+                      disabled={saving}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, sm: 4 }}>
                     <TextInput
                       type="datetime-local"
                       label="Measured At"
@@ -252,20 +350,38 @@ export function MeasurementsPage() {
                       disabled={saving}
                     />
                   </Grid.Col>
-                  <Grid.Col span={{ base: 12, sm: 3 }}>
+                  <Grid.Col span={{ base: 12, sm: 2 }}>
                     <Button fullWidth onClick={handleFormSubmit} loading={saving}>
-                      Add Measurement
+                      Add
                     </Button>
                   </Grid.Col>
                 </Grid>
 
                 {submitError && (
-                  <Alert color="red" title="Could not save measurement">
+                  <Alert color="red" title="Could not save one or more measurements">
                     <Stack gap="sm">
                       <Text size="sm">{submitError}</Text>
                       <Group>
                         <Button variant="outline" size="xs" onClick={handleRetryCreate} disabled={!lastSubmit || saving}>
                           Retry Submit
+                        </Button>
+                      </Group>
+                    </Stack>
+                  </Alert>
+                )}
+
+                {deleteError && (
+                  <Alert color="red" title="Could not delete measurement">
+                    <Stack gap="sm">
+                      <Text size="sm">{deleteError}</Text>
+                      <Group>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={handleRetryDelete}
+                          disabled={!lastDeleteAttempt || deletingMeasurementId !== null}
+                        >
+                          Retry Delete
                         </Button>
                       </Group>
                     </Stack>
@@ -300,15 +416,31 @@ export function MeasurementsPage() {
                 borderRadius: 'var(--mantine-radius-md)',
               }}
             >
-              <Text fw={600} mb="xs">No salinity history yet</Text>
-              <Text c="dimmed" size="sm">Add your first measurement above to begin trend tracking.</Text>
+              <Text fw={600} mb="xs">No measurement history yet</Text>
+              <Text c="dimmed" size="sm">Add your first measurements above to begin trend tracking.</Text>
             </Box>
           )}
 
           {viewState === 'ready' && sortedMeasurements.length > 0 && (
             <Stack gap="md">
-              <SalinityTrendChart measurements={sortedMeasurements} />
-              <MeasurementHistoryTable measurements={sortedMeasurements} />
+              <SalinityTrendChart measurements={salinityMeasurements} />
+              <MeasurementHistoryTable
+                title="Salinity History"
+                unit="ppt"
+                measurements={salinityMeasurements}
+                deletingMeasurementId={deletingMeasurementId}
+                onDelete={handleDeleteMeasurement}
+                testId="salinity-history-table"
+              />
+              <PhosphateTrendChart measurements={phosphateMeasurements} />
+              <MeasurementHistoryTable
+                title="Phosphate History"
+                unit="ppm"
+                measurements={phosphateMeasurements}
+                deletingMeasurementId={deletingMeasurementId}
+                onDelete={handleDeleteMeasurement}
+                testId="phosphate-history-table"
+              />
             </Stack>
           )}
         </>
@@ -327,32 +459,75 @@ function MeasurementsLoadingState() {
   )
 }
 
-function MeasurementHistoryTable({ measurements }: { measurements: SalinityMeasurementRecord[] }) {
+interface MeasurementHistoryTableProps {
+  title: string
+  unit: 'ppt' | 'ppm'
+  measurements: MeasurementRecord[]
+  deletingMeasurementId: string | null
+  onDelete: (measurementId: string, parameter: MeasurementParameter) => void
+  testId: string
+}
+
+function MeasurementHistoryTable({
+  title,
+  unit,
+  measurements,
+  deletingMeasurementId,
+  onDelete,
+  testId,
+}: MeasurementHistoryTableProps) {
+  if (measurements.length === 0) {
+    return (
+      <Alert color="gray" title={`${title} unavailable`}>
+        <Text size="sm">No {unit === 'ppt' ? 'salinity' : 'phosphate'} entries are available yet for this aquarium.</Text>
+      </Alert>
+    )
+  }
+
   return (
-    <Table withTableBorder highlightOnHover>
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>Measured At</Table.Th>
-          <Table.Th>Salinity</Table.Th>
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {measurements.map((measurement) => (
-          <Table.Tr key={measurement.id}>
-            <Table.Td>{formatDate(measurement.measuredAt)}</Table.Td>
-            <Table.Td>{measurement.value.toFixed(2)} ppt</Table.Td>
-          </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
+    <Card withBorder>
+      <Card.Section p="md" data-testid={testId}>
+        <Stack gap="xs">
+          <Text fw={600}>{title}</Text>
+          <Table withTableBorder highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Measured At</Table.Th>
+                <Table.Th>Value</Table.Th>
+                <Table.Th ta="right">Actions</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {measurements.map((measurement) => (
+                <Table.Tr key={measurement.id}>
+                  <Table.Td>{formatDate(measurement.measuredAt)}</Table.Td>
+                  <Table.Td>{measurement.value.toFixed(unit === 'ppt' ? 2 : 3)} {unit}</Table.Td>
+                  <Table.Td ta="right">
+                    <Button
+                      size="xs"
+                      color="red"
+                      variant="subtle"
+                      loading={deletingMeasurementId === measurement.id}
+                      onClick={() => onDelete(measurement.id, measurement.parameter)}
+                    >
+                      Delete
+                    </Button>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Stack>
+      </Card.Section>
+    </Card>
   )
 }
 
-function SalinityTrendChart({ measurements }: { measurements: SalinityMeasurementRecord[] }) {
+function SalinityTrendChart({ measurements }: { measurements: MeasurementRecord[] }) {
   if (measurements.length < 2) {
     return (
-      <Alert color="gray" title="Trend visualization unavailable">
-        <Text size="sm">At least two measurements are needed to render a salinity trend line.</Text>
+      <Alert color="gray" title="Salinity trend unavailable">
+        <Text size="sm">At least two salinity measurements are needed to render a trend line.</Text>
       </Alert>
     )
   }
@@ -412,7 +587,7 @@ function SalinityTrendChart({ measurements }: { measurements: SalinityMeasuremen
       <Card.Section p="md">
         <Stack gap="xs">
           <Text fw={600}>Salinity Trend (ppt)</Text>
-          <Text c="dimmed" size="sm">Displaying all recorded salinity history for the selected aquarium.</Text>
+          <Text c="dimmed" size="sm">Displaying all recorded salinity measurements for the selected aquarium.</Text>
           <Box ref={chartContainerRef} mih={240}>
             {canRenderChart ? (
               <LineChart
@@ -441,11 +616,116 @@ function SalinityTrendChart({ measurements }: { measurements: SalinityMeasuremen
   )
 }
 
+function PhosphateTrendChart({ measurements }: { measurements: MeasurementRecord[] }) {
+  if (measurements.length < 2) {
+    return (
+      <Alert color="gray" title="Phosphate trend unavailable">
+        <Text size="sm">At least two phosphate measurements are needed to render a trend line.</Text>
+      </Alert>
+    )
+  }
+
+  const ordered = [...measurements].sort((a, b) => Date.parse(a.measuredAt) - Date.parse(b.measuredAt))
+  const chartData = ordered.map((item) => ({
+    measuredAt: formatShortDate(item.measuredAt),
+    phosphate: item.value,
+  }))
+  const optimalPhosphate = 0.075
+  const upperGreen = 0.1
+  const redThreshold = 0.2
+  const values = chartData.map((item) => item.phosphate)
+  const yDomainMin = Math.min(0, ...values)
+  const yDomainMax = Math.max(redThreshold, ...values)
+  const yRange = yDomainMax - yDomainMin
+
+  const offsetForValue = (value: number): number => {
+    if (yRange <= 0) return 50
+    return ((yDomainMax - value) / yRange) * 100
+  }
+
+  const thresholdGradientStops = [
+    { offset: 0, color: 'red.7' },
+    { offset: offsetForValue(redThreshold), color: 'red.7' },
+    { offset: offsetForValue(upperGreen), color: 'green.6' },
+    { offset: offsetForValue(0), color: 'green.6' },
+    { offset: 100, color: 'green.6' },
+  ].sort((a, b) => a.offset - b.offset)
+
+  const chartContainerRef = useRef<HTMLDivElement | null>(null)
+  const [canRenderChart, setCanRenderChart] = useState(false)
+
+  useEffect(() => {
+    const element = chartContainerRef.current
+    if (!element) return
+
+    const updateChartVisibility = () => {
+      const { width, height } = element.getBoundingClientRect()
+      setCanRenderChart(width > 0 && height > 0)
+    }
+
+    updateChartVisibility()
+
+    const observer = new ResizeObserver(() => {
+      updateChartVisibility()
+    })
+    observer.observe(element)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  return (
+    <Card withBorder>
+      <Card.Section p="md">
+        <Stack gap="xs">
+          <Text fw={600}>Phosphate Trend (ppm)</Text>
+          <Text c="dimmed" size="sm">Displaying all recorded phosphate measurements for the selected aquarium.</Text>
+          <Box ref={chartContainerRef} mih={240}>
+            {canRenderChart ? (
+              <LineChart
+                h={240}
+                data={chartData}
+                dataKey="measuredAt"
+                type="gradient"
+                gradientStops={thresholdGradientStops}
+                yAxisProps={{ domain: [yDomainMin, yDomainMax] }}
+                referenceLines={[{ y: optimalPhosphate, label: 'Optimal Phosphate (0.075 ppm)', color: 'green.7' }]}
+                series={[{ name: 'phosphate', label: 'Phosphate' }]}
+                curveType="monotone"
+                withDots
+                withLegend
+                unit=" ppm"
+                valueFormatter={(value) => value.toFixed(3)}
+                tooltipAnimationDuration={200}
+              />
+            ) : (
+              <Skeleton h={240} />
+            )}
+          </Box>
+        </Stack>
+      </Card.Section>
+    </Card>
+  )
+}
+
 function validateMeasurement(values: MeasurementFormValues) {
   const errors: Partial<Record<keyof MeasurementFormValues, string>> = {}
 
-  if (values.value === '' || Number.isNaN(Number(values.value)) || Number(values.value) <= 0) {
-    errors.value = 'Enter a salinity value greater than 0 ppt.'
+  const hasSalinity = values.salinityValue !== ''
+  const hasPhosphate = values.phosphateValue !== ''
+
+  if (!hasSalinity && !hasPhosphate) {
+    errors.salinityValue = 'Enter at least one measurement value to submit.'
+    errors.phosphateValue = 'Enter at least one measurement value to submit.'
+  }
+
+  if (hasSalinity && (Number.isNaN(Number(values.salinityValue)) || Number(values.salinityValue) <= 0)) {
+    errors.salinityValue = 'Enter a salinity value greater than 0 ppt.'
+  }
+
+  if (hasPhosphate && (Number.isNaN(Number(values.phosphateValue)) || Number(values.phosphateValue) <= 0)) {
+    errors.phosphateValue = 'Enter a phosphate value greater than 0 ppm.'
   }
 
   if (!values.measuredAtLocal) {
@@ -455,12 +735,15 @@ function validateMeasurement(values: MeasurementFormValues) {
   return errors
 }
 
-function mapApiValidationErrors(error: ApiRequestError): Partial<Record<keyof MeasurementFormValues, string>> {
+function mapApiValidationErrors(
+  error: ApiRequestError,
+  valueKey: 'salinityValue' | 'phosphateValue',
+): Partial<Record<keyof MeasurementFormValues, string>> {
   const errors: Partial<Record<keyof MeasurementFormValues, string>> = {}
 
   for (const item of error.validationErrors ?? []) {
     if (item.loc.includes('value')) {
-      errors.value = item.msg
+      errors[valueKey] = item.msg
     }
 
     if (item.loc.includes('measured_at')) {
