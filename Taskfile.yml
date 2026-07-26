@@ -3,9 +3,9 @@ version: '3'
 vars:
   ContainerName: aqualog-frontend
   Version:
-    sh: poetry run cz version --project
+    sh: poetry run cz version --project || echo "0.0.0"
   MajorVersion:
-    sh: poetry run cz version --project --major
+    sh: poetry run cz version --project --major || echo "0"
 
 dotenv:
   - ../.env
@@ -16,7 +16,7 @@ tasks:
     cmds:
       - task --list
     
-  setup:
+  init:
     desc: Set up the project environment
     cmds:
       - cmd: ./tools/setup.sh
@@ -26,7 +26,7 @@ tasks:
     cmds:
       - cmd: npm ci
       - cmd: npm run build
-      - cmd: source .env && docker build -t {{.ContainerName}}:latest .
+      - cmd: docker build -t {{.ContainerName}}:latest .
       - cmd: docker image tag {{.ContainerName}}:latest {{.ContainerName}}:{{.Version}}
 
   run:
@@ -61,7 +61,7 @@ tasks:
           --cache-dir /tmp/trivy \
           {{.ContainerName}}:{{.Version}}
 
-  backend:
+  server:
     desc: Start the API server locally
     env:
       # AQUALOG_APP_ENV: "{{.AQUALOG_APP_ENV}}"
@@ -75,7 +75,7 @@ tasks:
       - cmd: env | grep AQUALOG_
       - cmd: npm ci
       - cmd: npm run build
-      - cmd: "uvicorn backend.main:app --reload --host 0.0.0.0 --port ${FRONTEND_PORT_HTTP}"
+      - cmd: poetry run uvicorn backend.main:app --reload --host 0.0.0.0 --port ${FRONTEND_PORT_HTTP}
 
   frontend:
     desc: Start the frontend server locally

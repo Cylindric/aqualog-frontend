@@ -1,11 +1,19 @@
 import os
 from pathlib import Path
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="aqualog-frontend-backend",
     openapi_url="/api/openapi.json",
     docs_url="/api/docs"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 FRONTEND_DIR = Path(os.getenv("FRONTEND_DIR", "/app/frontend"))
