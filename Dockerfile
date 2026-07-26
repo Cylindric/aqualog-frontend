@@ -17,7 +17,10 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
+
+# Read the current version from pyproject.toml and write it to a file for later use
 RUN python -c "import tomllib; from pathlib import Path; version = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version']; Path('/app/.container-env').write_text(f'AQUALOG_APP_VERSION={version}\\n', encoding='utf-8')"
+
 RUN pip install --upgrade pip && pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false && \
     poetry install --only main --no-interaction --no-ansi

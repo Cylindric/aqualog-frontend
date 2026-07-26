@@ -1,5 +1,5 @@
 schema: spec-driven
 context: |
-  Tech stack: React, Vite, Chakra, Docker.
+  Tech stack: React, Vite, Mantine, Docker.
   Domain: aquarium management platform.
   The AquaLog functional API that this project uses is based on the OpenAPI specification, which is available at http://localhost:8001/api/v1/openapi.json

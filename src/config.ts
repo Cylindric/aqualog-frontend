@@ -10,6 +10,8 @@ export interface RuntimeConfig {
 
 const DEFAULT_SCOPE = 'openid profile email'
 const DEFAULT_VERSION_DISPLAY = 'unavailable'
+const RUNTIME_CONFIG_PATH = '/api/runtime-config'
+const DEV_FALLBACK_URL = 'http://localhost:8002/api/runtime-config'
 
 export const config: RuntimeConfig = {
   apiBaseUrl: '',
@@ -33,24 +35,33 @@ interface RuntimeConfigResponse {
   AQUALOG_APP_VERSION?: string
 }
 
+async function fetchRuntimeConfig(url: string): Promise<Response> {
+  return fetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  })
+}
+
 export async function loadRuntimeConfig(): Promise<void> {
   loadError = ''
 
   let response: Response
   try {
-    response = await fetch('/api/runtime-config', {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-    })
+    response = await fetchRuntimeConfig(RUNTIME_CONFIG_PATH)
+    if (!response.ok) {
+      throw new Error(`Runtime config request failed: ${response.status} ${response.statusText}`)
+    }
   } catch {
-    loadError = 'Failed to load runtime config from /api/runtime-config'
-    return
-  }
-
-  if (!response.ok) {
-    loadError = `Runtime config request failed: ${response.status} ${response.statusText}`
-    return
+    try {
+      response = await fetchRuntimeConfig(DEV_FALLBACK_URL)
+      if (!response.ok) {
+        throw new Error(`Runtime config request failed: ${response.status} ${response.statusText}`)
+      }
+    } catch {
+      loadError = `Failed to load runtime config from ${RUNTIME_CONFIG_PATH} or ${DEV_FALLBACK_URL}`
+      return
+    }
   }
 
   let payload: RuntimeConfigResponse
