@@ -1,3 +1,9 @@
+## v1.9.1 (2026-07-26)
+
+### Fix
+
+- bump @testing-library/jest-dom from 6.9.1 to 7.0.0
+
 ## v1.9.0 (2026-07-26)
 
 ### Feat
