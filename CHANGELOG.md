@@ -1,3 +1,10 @@
+## v1.9.2 (2026-07-26)
+
+### Fix
+
+- bump react from 19.2.7 to 19.2.8
+- bump @vitejs/plugin-react from 6.0.3 to 6.0.4
+
 ## v1.9.1 (2026-07-26)
 
 ### Fix
