@@ -29,6 +29,10 @@ const MeasurementsPage = lazy(() =>
   import('./pages/MeasurementsPage').then((module) => ({ default: module.MeasurementsPage })),
 )
 
+const ProfilePage = lazy(() =>
+  import('./pages/ProfilePage').then((module) => ({ default: module.ProfilePage })),
+)
+
 const NotFoundPage = lazy(() =>
   import('./pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage })),
 )
@@ -96,6 +100,7 @@ function AuthenticatedApp() {
           <Route path="/calculator" element={<CalculatorPage />} />
           <Route path="/aquariums" element={<AquariumsPage />} />
           <Route path="/measurements" element={<MeasurementsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Shell>

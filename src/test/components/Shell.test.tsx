@@ -108,4 +108,14 @@ describe('Shell navigation layout', () => {
 
     expect(screen.getByTestId('app-version-status')).toHaveTextContent('Version: unavailable')
   })
+
+  it('includes a profile navigation entry', () => {
+    renderShell('/dashboard')
+
+    const desktopNav = screen.getByTestId('desktop-double-navbar')
+    const compactNav = screen.getByTestId('compact-primary-nav')
+
+    expect(within(desktopNav).getAllByRole('link', { name: /profile/i }).length).toBeGreaterThan(0)
+    expect(within(compactNav).getByRole('link', { name: /profile/i })).toBeInTheDocument()
+  })
 })
