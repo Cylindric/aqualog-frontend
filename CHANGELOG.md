@@ -1,3 +1,9 @@
+## v1.11.0 (2026-07-27)
+
+### Feat
+
+- chart thresholds now come from aquarium settings
+
 ## v1.10.0 (2026-07-27)
 
 ### Feat
