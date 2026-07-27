@@ -4,8 +4,10 @@ import {
   Box,
   Button,
   Card,
+  Checkbox,
   Grid,
   Group,
+  Modal,
   NumberInput,
   Select,
   Skeleton,
@@ -198,6 +200,9 @@ export function MeasurementsPage() {
   const [deletingMeasurementId, setDeletingMeasurementId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState('')
   const [lastDeleteAttempt, setLastDeleteAttempt] = useState<LastDeleteAttempt | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<LastDeleteAttempt | null>(null)
+
+  const [showEmpty, setShowEmpty] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -327,6 +332,25 @@ export function MeasurementsPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  function requestDeleteMeasurement(measurementId: string, parameter: MeasurementParameter, shiftKey: boolean) {
+    if (shiftKey) {
+      void handleDeleteMeasurement(measurementId, parameter)
+      return
+    }
+    setPendingDelete({ id: measurementId, parameter })
+  }
+
+  function cancelPendingDelete() {
+    setPendingDelete(null)
+  }
+
+  function confirmPendingDelete() {
+    if (!pendingDelete) return
+    const { id, parameter } = pendingDelete
+    setPendingDelete(null)
+    void handleDeleteMeasurement(id, parameter)
   }
 
   async function handleDeleteMeasurement(measurementId: string, parameter: MeasurementParameter) {
@@ -560,19 +584,45 @@ export function MeasurementsPage() {
                     parameter={parameter}
                     measurements={measurementsByParameter[parameter.key]}
                     threshold={thresholds[parameter.key]}
+                    showEmpty={showEmpty}
                   />
                   <MeasurementHistoryTable
                     parameter={parameter}
                     measurements={measurementsByParameter[parameter.key]}
                     deletingMeasurementId={deletingMeasurementId}
-                    onDelete={handleDeleteMeasurement}
+                    onDelete={requestDeleteMeasurement}
+                    showEmpty={showEmpty}
                   />
                 </Stack>
               ))}
             </Stack>
           )}
+
+          <Checkbox
+            label="Show empty tables and charts"
+            checked={showEmpty}
+            onChange={(event) => setShowEmpty(event.currentTarget.checked)}
+          />
         </>
       )}
+
+      <Modal opened={pendingDelete !== null} onClose={cancelPendingDelete} title="Delete measurement?" centered>
+        <Stack gap="md">
+          <Text size="sm">
+            Are you sure you want to delete this{' '}
+            {pendingDelete ? PARAMETERS.find((parameter) => parameter.key === pendingDelete.parameter)?.label : ''}{' '}
+            measurement? This cannot be undone.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={cancelPendingDelete}>
+              Cancel
+            </Button>
+            <Button color="red" onClick={confirmPendingDelete}>
+              Delete
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Stack>
   )
 }
@@ -591,7 +641,8 @@ interface MeasurementHistoryTableProps {
   parameter: ParameterConfig
   measurements: MeasurementRecord[]
   deletingMeasurementId: string | null
-  onDelete: (measurementId: string, parameter: MeasurementParameter) => void
+  onDelete: (measurementId: string, parameter: MeasurementParameter, shiftKey: boolean) => void
+  showEmpty: boolean
 }
 
 function MeasurementHistoryTable({
@@ -599,10 +650,13 @@ function MeasurementHistoryTable({
   measurements,
   deletingMeasurementId,
   onDelete,
+  showEmpty,
 }: MeasurementHistoryTableProps) {
   const title = `${parameter.label} History`
 
   if (measurements.length === 0) {
+    if (!showEmpty) return null
+
     return (
       <Alert color="gray" title={`${title} unavailable`}>
         <Text size="sm">No {parameter.label.toLowerCase()} entries are available yet for this aquarium.</Text>
@@ -636,7 +690,7 @@ function MeasurementHistoryTable({
                       color="red"
                       variant="subtle"
                       loading={deletingMeasurementId === measurement.id}
-                      onClick={() => onDelete(measurement.id, measurement.parameter)}
+                      onClick={(event) => onDelete(measurement.id, measurement.parameter, event.shiftKey)}
                     >
                       Delete
                     </Button>
@@ -655,10 +709,12 @@ function ParameterTrendChart({
   parameter,
   measurements,
   threshold,
+  showEmpty,
 }: {
   parameter: ParameterConfig
   measurements: MeasurementRecord[]
   threshold: ThresholdRecord | null
+  showEmpty: boolean
 }) {
   const chartContainerRef = useRef<HTMLDivElement | null>(null)
   const [canRenderChart, setCanRenderChart] = useState(false)
@@ -685,6 +741,8 @@ function ParameterTrendChart({
   }, [])
 
   if (measurements.length < 2) {
+    if (!showEmpty) return null
+
     return (
       <Alert color="gray" title={`${parameter.label} trend unavailable`}>
         <Text size="sm">
