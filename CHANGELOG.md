@@ -1,3 +1,13 @@
+## v1.10.0 (2026-07-27)
+
+### Feat
+
+- add a little /api/health endpoint
+
+### Fix
+
+- package versions
+
 ## v1.9.2 (2026-07-26)
 
 ### Fix
