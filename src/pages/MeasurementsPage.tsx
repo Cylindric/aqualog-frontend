@@ -26,6 +26,7 @@ import {
   type MeasurementParameter,
   type MeasurementRecord,
 } from '../api/measurements'
+import { getThreshold, type ThresholdRecord } from '../api/thresholds'
 import { ApiRequestError, toUserMessage } from '../api/client'
 
 type MeasurementsViewState = 'idle' | 'loading' | 'ready' | 'error'
@@ -59,6 +60,9 @@ export function MeasurementsPage() {
   const [measurements, setMeasurements] = useState<MeasurementRecord[]>([])
   const [historyError, setHistoryError] = useState('')
 
+  const [salinityThreshold, setSalinityThreshold] = useState<ThresholdRecord | null>(null)
+  const [phosphateThreshold, setPhosphateThreshold] = useState<ThresholdRecord | null>(null)
+
   const [formValues, setFormValues] = useState<MeasurementFormValues>(defaultFormValues())
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof MeasurementFormValues, string>>>({})
   const [saving, setSaving] = useState(false)
@@ -82,11 +86,14 @@ export function MeasurementsPage() {
     if (!selectedAquariumId) {
       setMeasurements([])
       setViewState('idle')
+      setSalinityThreshold(null)
+      setPhosphateThreshold(null)
       return
     }
 
     const controller = new AbortController()
     void loadMeasurements(selectedAquariumId, controller.signal)
+    void loadThresholds(selectedAquariumId, controller.signal)
     return () => {
       controller.abort()
     }
@@ -251,6 +258,21 @@ export function MeasurementsPage() {
     } catch (error) {
       setHistoryError(toUserMessage(error))
       setViewState('error')
+    }
+  }
+
+  async function loadThresholds(aquariumId: string, signal?: AbortSignal) {
+    try {
+      const [salinity, phosphate] = await Promise.all([
+        getThreshold(aquariumId, 'salinity', signal),
+        getThreshold(aquariumId, 'phosphate', signal),
+      ])
+      setSalinityThreshold(salinity)
+      setPhosphateThreshold(phosphate)
+    } catch {
+      // Configured limits are a chart enhancement, not core data - degrade to unannotated trend lines.
+      setSalinityThreshold(null)
+      setPhosphateThreshold(null)
     }
   }
 
@@ -423,7 +445,7 @@ export function MeasurementsPage() {
 
           {viewState === 'ready' && sortedMeasurements.length > 0 && (
             <Stack gap="md">
-              <SalinityTrendChart measurements={salinityMeasurements} />
+              <SalinityTrendChart measurements={salinityMeasurements} threshold={salinityThreshold} />
               <MeasurementHistoryTable
                 title="Salinity History"
                 unit="ppt"
@@ -432,7 +454,7 @@ export function MeasurementsPage() {
                 onDelete={handleDeleteMeasurement}
                 testId="salinity-history-table"
               />
-              <PhosphateTrendChart measurements={phosphateMeasurements} />
+              <PhosphateTrendChart measurements={phosphateMeasurements} threshold={phosphateThreshold} />
               <MeasurementHistoryTable
                 title="Phosphate History"
                 unit="ppm"
@@ -523,7 +545,13 @@ function MeasurementHistoryTable({
   )
 }
 
-function SalinityTrendChart({ measurements }: { measurements: MeasurementRecord[] }) {
+function SalinityTrendChart({
+  measurements,
+  threshold,
+}: {
+  measurements: MeasurementRecord[]
+  threshold: ThresholdRecord | null
+}) {
   if (measurements.length < 2) {
     return (
       <Alert color="gray" title="Salinity trend unavailable">
@@ -537,26 +565,8 @@ function SalinityTrendChart({ measurements }: { measurements: MeasurementRecord[
     measuredAt: formatShortDate(item.measuredAt),
     salinity: item.value,
   }))
-  const optimalSalinity = 35
-  const lowerThreshold = 33
-  const upperThreshold = 37
   const values = chartData.map((item) => item.salinity)
-  const yDomainMin = Math.min(lowerThreshold, ...values)
-  const yDomainMax = Math.max(upperThreshold, ...values)
-  const yRange = yDomainMax - yDomainMin
-
-  const offsetForValue = (value: number): number => {
-    if (yRange <= 0) return 50
-    return ((yDomainMax - value) / yRange) * 100
-  }
-
-  const thresholdGradientStops = [
-    { offset: 0, color: 'red.7' },
-    { offset: offsetForValue(upperThreshold), color: 'red.7' },
-    { offset: offsetForValue(optimalSalinity), color: 'green.6' },
-    { offset: offsetForValue(lowerThreshold), color: 'red.7' },
-    { offset: 100, color: 'red.7' },
-  ].sort((a, b) => a.offset - b.offset)
+  const visuals = computeThresholdVisuals(threshold, values, 'Salinity', (value) => value.toFixed(2))
 
   const chartContainerRef = useRef<HTMLDivElement | null>(null)
   const [canRenderChart, setCanRenderChart] = useState(false)
@@ -594,10 +604,10 @@ function SalinityTrendChart({ measurements }: { measurements: MeasurementRecord[
                 h={240}
                 data={chartData}
                 dataKey="measuredAt"
-                type="gradient"
-                gradientStops={thresholdGradientStops}
-                yAxisProps={{ domain: [yDomainMin, yDomainMax] }}
-                referenceLines={[{ y: optimalSalinity, label: 'Optimal Salinity (35 ppt)', color: 'green.7' }]}
+                type={visuals.gradientStops ? 'gradient' : 'default'}
+                gradientStops={visuals.gradientStops}
+                yAxisProps={{ domain: [visuals.yDomainMin, visuals.yDomainMax] }}
+                referenceLines={visuals.referenceLines}
                 series={[{ name: 'salinity', label: 'Salinity' }]}
                 curveType="monotone"
                 withDots
@@ -616,7 +626,13 @@ function SalinityTrendChart({ measurements }: { measurements: MeasurementRecord[
   )
 }
 
-function PhosphateTrendChart({ measurements }: { measurements: MeasurementRecord[] }) {
+function PhosphateTrendChart({
+  measurements,
+  threshold,
+}: {
+  measurements: MeasurementRecord[]
+  threshold: ThresholdRecord | null
+}) {
   if (measurements.length < 2) {
     return (
       <Alert color="gray" title="Phosphate trend unavailable">
@@ -630,26 +646,8 @@ function PhosphateTrendChart({ measurements }: { measurements: MeasurementRecord
     measuredAt: formatShortDate(item.measuredAt),
     phosphate: item.value,
   }))
-  const optimalPhosphate = 0.075
-  const upperGreen = 0.1
-  const redThreshold = 0.2
   const values = chartData.map((item) => item.phosphate)
-  const yDomainMin = Math.min(0, ...values)
-  const yDomainMax = Math.max(redThreshold, ...values)
-  const yRange = yDomainMax - yDomainMin
-
-  const offsetForValue = (value: number): number => {
-    if (yRange <= 0) return 50
-    return ((yDomainMax - value) / yRange) * 100
-  }
-
-  const thresholdGradientStops = [
-    { offset: 0, color: 'red.7' },
-    { offset: offsetForValue(redThreshold), color: 'red.7' },
-    { offset: offsetForValue(upperGreen), color: 'green.6' },
-    { offset: offsetForValue(0), color: 'green.6' },
-    { offset: 100, color: 'green.6' },
-  ].sort((a, b) => a.offset - b.offset)
+  const visuals = computeThresholdVisuals(threshold, values, 'Phosphate', (value) => value.toFixed(3))
 
   const chartContainerRef = useRef<HTMLDivElement | null>(null)
   const [canRenderChart, setCanRenderChart] = useState(false)
@@ -687,10 +685,10 @@ function PhosphateTrendChart({ measurements }: { measurements: MeasurementRecord
                 h={240}
                 data={chartData}
                 dataKey="measuredAt"
-                type="gradient"
-                gradientStops={thresholdGradientStops}
-                yAxisProps={{ domain: [yDomainMin, yDomainMax] }}
-                referenceLines={[{ y: optimalPhosphate, label: 'Optimal Phosphate (0.075 ppm)', color: 'green.7' }]}
+                type={visuals.gradientStops ? 'gradient' : 'default'}
+                gradientStops={visuals.gradientStops}
+                yAxisProps={{ domain: [visuals.yDomainMin, visuals.yDomainMax] }}
+                referenceLines={visuals.referenceLines}
                 series={[{ name: 'phosphate', label: 'Phosphate' }]}
                 curveType="monotone"
                 withDots
@@ -707,6 +705,55 @@ function PhosphateTrendChart({ measurements }: { measurements: MeasurementRecord
       </Card.Section>
     </Card>
   )
+}
+
+interface ThresholdVisuals {
+  gradientStops?: { offset: number; color: string }[]
+  referenceLines?: { y: number; label: string; color: string }[]
+  yDomainMin: number
+  yDomainMax: number
+}
+
+function computeThresholdVisuals(
+  threshold: ThresholdRecord | null,
+  values: number[],
+  parameterLabel: string,
+  formatValue: (value: number) => string,
+): ThresholdVisuals {
+  const min = threshold?.min ?? null
+  const target = threshold?.target ?? null
+  const max = threshold?.max ?? null
+
+  const boundValues = [min, target, max].filter((value): value is number => value !== null)
+  const yDomainMin = Math.min(...values, ...boundValues)
+  const yDomainMax = Math.max(...values, ...boundValues)
+
+  const referenceLines =
+    target !== null
+      ? [{ y: target, label: `Target ${parameterLabel} (${formatValue(target)})`, color: 'green.7' }]
+      : undefined
+
+  if (min === null && max === null) {
+    return { referenceLines, yDomainMin, yDomainMax }
+  }
+
+  const yRange = yDomainMax - yDomainMin
+  const offsetForValue = (value: number): number => {
+    if (yRange <= 0) return 50
+    return Math.min(100, Math.max(0, ((yDomainMax - value) / yRange) * 100))
+  }
+
+  const greenAnchor = target ?? ((min ?? yDomainMin) + (max ?? yDomainMax)) / 2
+
+  const gradientStops = [
+    { offset: 0, color: max !== null ? 'red.7' : 'green.6' },
+    ...(max !== null ? [{ offset: offsetForValue(max), color: 'red.7' }] : []),
+    { offset: offsetForValue(greenAnchor), color: 'green.6' },
+    ...(min !== null ? [{ offset: offsetForValue(min), color: 'red.7' }] : []),
+    { offset: 100, color: min !== null ? 'red.7' : 'green.6' },
+  ].sort((a, b) => a.offset - b.offset)
+
+  return { gradientStops, referenceLines, yDomainMin, yDomainMax }
 }
 
 function validateMeasurement(values: MeasurementFormValues) {

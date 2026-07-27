@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import {
   createAquarium,
   deleteAquarium,
+  getAquarium,
   listAquariums,
   updateAquarium,
 } from '../../api/aquariums'
@@ -70,6 +71,56 @@ describe('aquariums api', () => {
     const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toContain('/api/v1/aquariums')
     expect(options.method).toBe('GET')
+  })
+
+  it('gets a single aquarium by id and maps response fields', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        request_id: 'req-1b',
+        data: {
+          id: 'aq-1',
+          name: 'Reef Tank',
+          type: 'Saltwater Reef',
+          volume_liters: 284,
+          created_at: '2026-07-18T10:00:00Z',
+          updated_at: '2026-07-18T10:00:00Z',
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getAquarium('aq-1')).resolves.toEqual({
+      id: 'aq-1',
+      name: 'Reef Tank',
+      type: 'Saltwater Reef',
+      volumeLiters: 284,
+      createdAt: '2026-07-18T10:00:00Z',
+      updatedAt: '2026-07-18T10:00:00Z',
+    })
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/aquariums/aq-1')
+    expect(options.method).toBe('GET')
+  })
+
+  it('throws a 404 ApiRequestError when getting a missing aquarium', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => JSON.stringify({ detail: 'Aquarium not found' }),
+      }),
+    )
+
+    await expect(getAquarium('missing-id')).rejects.toMatchObject({
+      name: 'ApiRequestError',
+      status: 404,
+    })
   })
 
   it('creates aquarium with expected payload and returns mapped record', async () => {

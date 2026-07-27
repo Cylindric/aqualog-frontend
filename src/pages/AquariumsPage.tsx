@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import {
   Alert,
   Box,
@@ -16,13 +17,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core'
-import {
-  type AquariumRecord,
-  createAquarium,
-  deleteAquarium,
-  listAquariums,
-  updateAquarium,
-} from '../api/aquariums'
+import { type AquariumRecord, createAquarium, deleteAquarium, listAquariums } from '../api/aquariums'
 import { ApiRequestError, toUserMessage } from '../api/client'
 
 interface AquariumFormValues {
@@ -49,11 +44,11 @@ const defaultFormValues = (): AquariumFormValues => ({
 })
 
 export function AquariumsPage() {
+  const navigate = useNavigate()
   const [viewState, setViewState] = useState<ViewState>('loading')
   const [pageError, setPageError] = useState('')
   const [aquariums, setAquariums] = useState<AquariumRecord[]>([])
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [selectedAquarium, setSelectedAquarium] = useState<AquariumRecord | null>(null)
   const [formValues, setFormValues] = useState<AquariumFormValues>(defaultFormValues())
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof AquariumFormValues, string>>>({})
   const [submitError, setSubmitError] = useState('')
@@ -71,13 +66,7 @@ export function AquariumsPage() {
     }
   }, [])
 
-  const drawerTitle = useMemo(
-    () => (selectedAquarium ? 'Edit Aquarium' : 'Add Aquarium'),
-    [selectedAquarium],
-  )
-
   const handleAdd = () => {
-    setSelectedAquarium(null)
     setFormValues(defaultFormValues())
     setFormErrors({})
     setSubmitError('')
@@ -85,23 +74,13 @@ export function AquariumsPage() {
   }
 
   const handleEdit = (aquarium: AquariumRecord) => {
-    setSelectedAquarium(aquarium)
-    setFormValues({
-      name: aquarium.name,
-      type: aquarium.type,
-      volumeValue: Number(aquarium.volumeLiters.toFixed(2)),
-      volumeUnit: 'L',
-    })
-    setFormErrors({})
-    setSubmitError('')
-    setDrawerOpen(true)
+    navigate(`/aquariums/${aquarium.id}`)
   }
 
   const handleCloseDrawer = () => {
     if (saving) return
 
     setDrawerOpen(false)
-    setSelectedAquarium(null)
     setFormErrors({})
     setSubmitError('')
   }
@@ -162,15 +141,8 @@ export function AquariumsPage() {
         },
       }
 
-      if (selectedAquarium) {
-        const updated = await updateAquarium(selectedAquarium.id, payload)
-        setAquariums((current) =>
-          current.map((item) => (item.id === updated.id ? updated : item)),
-        )
-      } else {
-        const created = await createAquarium(payload)
-        setAquariums((current) => [created, ...current])
-      }
+      const created = await createAquarium(payload)
+      setAquariums((current) => [created, ...current])
 
       handleCloseDrawer()
     } catch (error) {
@@ -315,7 +287,7 @@ export function AquariumsPage() {
         onClose={handleCloseDrawer}
         position="right"
         size="md"
-        title={drawerTitle}
+        title="Add Aquarium"
       >
         <Stack gap="md">
           <TextInput
@@ -380,7 +352,7 @@ export function AquariumsPage() {
               Cancel
             </Button>
             <Button onClick={() => void handleSubmit()} loading={saving}>
-              {selectedAquarium ? 'Save Changes' : 'Add Aquarium'}
+              Add Aquarium
             </Button>
           </Group>
         </Stack>

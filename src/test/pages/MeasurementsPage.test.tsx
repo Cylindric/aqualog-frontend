@@ -12,6 +12,7 @@ import {
   listPhosphateMeasurements,
   listSalinityMeasurements,
 } from '../../api/measurements'
+import { getThreshold, type ThresholdParameter } from '../../api/thresholds'
 
 vi.mock('../../api/aquariums', () => ({
   listAquariums: vi.fn(),
@@ -25,6 +26,14 @@ vi.mock('../../api/measurements', () => ({
   deleteMeasurement: vi.fn(),
 }))
 
+vi.mock('../../api/thresholds', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api/thresholds')>()
+  return {
+    ...actual,
+    getThreshold: vi.fn(),
+  }
+})
+
 function Wrapper({ children }: { children: ReactNode }) {
   return <Provider>{children}</Provider>
 }
@@ -35,6 +44,18 @@ const listPhosphateMeasurementsMock = vi.mocked(listPhosphateMeasurements)
 const createSalinityMeasurementMock = vi.mocked(createSalinityMeasurement)
 const createPhosphateMeasurementMock = vi.mocked(createPhosphateMeasurement)
 const deleteMeasurementMock = vi.mocked(deleteMeasurement)
+const getThresholdMock = vi.mocked(getThreshold)
+
+function emptyThreshold(parameter: ThresholdParameter) {
+  return {
+    aquariumId: 'aq-1',
+    parameter,
+    target: null,
+    min: null,
+    max: null,
+    unit: parameter === 'salinity' ? 'ppt' : parameter === 'phosphate' ? 'ppm' : 'celsius',
+  }
+}
 
 function renderPage() {
   return render(<MeasurementsPage />, { wrapper: Wrapper })
@@ -129,6 +150,8 @@ beforeEach(() => {
   })
 
   deleteMeasurementMock.mockResolvedValue()
+
+  getThresholdMock.mockImplementation(async (_aquariumId, parameter) => emptyThreshold(parameter))
 })
 
 afterEach(() => {
@@ -246,6 +269,34 @@ describe('MeasurementsPage', () => {
 
     expect(await screen.findByText(/could not delete measurement/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /retry delete/i })).toBeInTheDocument()
+  })
+
+  it('fetches configured thresholds for the selected aquarium instead of using hardcoded values', async () => {
+    getThresholdMock.mockImplementation(async (aquariumId, parameter) => {
+      if (parameter === 'salinity') {
+        return { aquariumId, parameter, min: 33, target: 35, max: 37, unit: 'ppt' }
+      }
+      return emptyThreshold(parameter)
+    })
+
+    renderPage()
+
+    await screen.findByText(/salinity trend \(ppt\)/i)
+
+    await waitFor(() => {
+      expect(getThresholdMock).toHaveBeenCalledWith('aq-1', 'salinity', expect.anything())
+      expect(getThresholdMock).toHaveBeenCalledWith('aq-1', 'phosphate', expect.anything())
+    })
+  })
+
+  it('does not fetch thresholds until an aquarium is selected, and degrades gracefully if the fetch fails', async () => {
+    getThresholdMock.mockRejectedValue(new TypeError('Failed to fetch'))
+    listAquariumsMock.mockResolvedValueOnce([])
+
+    renderPage()
+
+    await screen.findByRole('heading', { name: /aquarium measurements/i })
+    expect(getThresholdMock).not.toHaveBeenCalled()
   })
 
   it('shows phosphate chart fallback when phosphate data is sparse', async () => {
