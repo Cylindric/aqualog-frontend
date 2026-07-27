@@ -331,7 +331,7 @@ export function MeasurementsPage() {
                       error={formErrors.phosphateValue}
                       decimalScale={3}
                       allowNegative={false}
-                      min={0.001}
+                      min={0.0}
                       clampBehavior="none"
                       placeholder="e.g. 0.075"
                       disabled={saving}
