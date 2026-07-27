@@ -1,3 +1,9 @@
+## v1.13.0 (2026-07-27)
+
+### Feat
+
+- confirm before delete and hide empty measurement rows by default
+
 ## v1.12.0 (2026-07-27)
 
 ### Feat
