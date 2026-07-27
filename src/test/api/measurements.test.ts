@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  createAlkalinityMeasurement,
+  createAmmoniaMeasurement,
+  createCalciumMeasurement,
+  createPhMeasurement,
   createPhosphateMeasurement,
   createSalinityMeasurement,
   deleteMeasurement,
+  listCalciumMeasurements,
   listPhosphateMeasurements,
   listSalinityMeasurements,
 } from '../../api/measurements'
@@ -197,6 +202,176 @@ describe('measurements api', () => {
         value: 0.075,
         measured_at: '2026-07-19T09:30:00Z',
       }),
+    )
+  })
+
+  it('lists calcium measurements and maps ppm unit', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        request_id: 'req-ca-1',
+        data: [
+          {
+            id: 'm-ca-1',
+            aquarium_id: 'aq-1',
+            parameter: 'calcium',
+            value: 420,
+            unit: 'ppm',
+            raw_value: 420,
+            raw_unit: 'ppm',
+            measured_at: '2026-07-19T10:00:00Z',
+            created_at: '2026-07-19T10:01:00Z',
+          },
+        ],
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(listCalciumMeasurements('aq-1')).resolves.toEqual([
+      {
+        id: 'm-ca-1',
+        aquariumId: 'aq-1',
+        parameter: 'calcium',
+        value: 420,
+        unit: 'ppm',
+        rawValue: 420,
+        rawUnit: 'ppm',
+        measuredAt: '2026-07-19T10:00:00Z',
+        createdAt: '2026-07-19T10:01:00Z',
+      },
+    ])
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/aquariums/aq-1/measurements/calcium')
+  })
+
+  it('creates a calcium measurement with a ppm unit payload', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        success: true,
+        request_id: 'req-ca-2',
+        data: {
+          id: 'm-ca-2',
+          aquarium_id: 'aq-1',
+          parameter: 'calcium',
+          value: 420,
+          unit: 'ppm',
+          raw_value: 420,
+          raw_unit: 'ppm',
+          measured_at: '2026-07-19T09:30:00Z',
+          created_at: '2026-07-19T09:31:00Z',
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      createCalciumMeasurement('aq-1', { value: 420, measuredAt: '2026-07-19T09:30:00Z' }),
+    ).resolves.toMatchObject({ id: 'm-ca-2', unit: 'ppm' })
+
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(options.body).toBe(
+      JSON.stringify({ unit: 'ppm', value: 420, measured_at: '2026-07-19T09:30:00Z' }),
+    )
+  })
+
+  it('creates an ammonia measurement with a lowercase "mg/l" request unit and preserves the "mg/L" response unit', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        success: true,
+        request_id: 'req-am-1',
+        data: {
+          id: 'm-am-1',
+          aquarium_id: 'aq-1',
+          parameter: 'ammonia',
+          value: 0.25,
+          unit: 'mg/L',
+          raw_value: 0.25,
+          raw_unit: 'mg/l',
+          measured_at: '2026-07-19T09:30:00Z',
+          created_at: '2026-07-19T09:31:00Z',
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      createAmmoniaMeasurement('aq-1', { value: 0.25, measuredAt: '2026-07-19T09:30:00Z' }),
+    ).resolves.toMatchObject({ id: 'm-am-1', unit: 'mg/L' })
+
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(options.body).toBe(
+      JSON.stringify({ unit: 'mg/l', value: 0.25, measured_at: '2026-07-19T09:30:00Z' }),
+    )
+  })
+
+  it('creates a pH measurement with a lowercase "ph" request unit', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        success: true,
+        request_id: 'req-ph-3',
+        data: {
+          id: 'm-ph-3',
+          aquarium_id: 'aq-1',
+          parameter: 'ph',
+          value: 8.2,
+          unit: 'pH',
+          raw_value: 8.2,
+          raw_unit: 'ph',
+          measured_at: '2026-07-19T09:30:00Z',
+          created_at: '2026-07-19T09:31:00Z',
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      createPhMeasurement('aq-1', { value: 8.2, measuredAt: '2026-07-19T09:30:00Z' }),
+    ).resolves.toMatchObject({ id: 'm-ph-3', unit: 'pH' })
+
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(options.body).toBe(
+      JSON.stringify({ unit: 'ph', value: 8.2, measured_at: '2026-07-19T09:30:00Z' }),
+    )
+  })
+
+  it('creates an alkalinity measurement with a lowercase "dkh" request unit', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        success: true,
+        request_id: 'req-alk-1',
+        data: {
+          id: 'm-alk-1',
+          aquarium_id: 'aq-1',
+          parameter: 'alkalinity',
+          value: 8.5,
+          unit: 'dKH',
+          raw_value: 8.5,
+          raw_unit: 'dkh',
+          measured_at: '2026-07-19T09:30:00Z',
+          created_at: '2026-07-19T09:31:00Z',
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      createAlkalinityMeasurement('aq-1', { value: 8.5, measuredAt: '2026-07-19T09:30:00Z' }),
+    ).resolves.toMatchObject({ id: 'm-alk-1', unit: 'dKH' })
+
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(options.body).toBe(
+      JSON.stringify({ unit: 'dkh', value: 8.5, measured_at: '2026-07-19T09:30:00Z' }),
     )
   })
 

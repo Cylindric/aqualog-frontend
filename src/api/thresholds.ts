@@ -1,6 +1,16 @@
 import { ApiRequestError, apiGet, apiPut } from './client'
 
-export type ThresholdParameter = 'temperature' | 'salinity' | 'phosphate'
+export type ThresholdParameter =
+  | 'temperature'
+  | 'salinity'
+  | 'phosphate'
+  | 'calcium'
+  | 'ammonia'
+  | 'nitrite'
+  | 'nitrate'
+  | 'ph'
+  | 'alkalinity'
+  | 'magnesium'
 
 export interface ThresholdRecord {
   aquariumId: string
@@ -37,6 +47,13 @@ export const THRESHOLD_SANITY_RANGES: Record<ThresholdParameter, { min: number; 
   temperature: { min: 0, max: 45 },
   salinity: { min: 0, max: 100 },
   phosphate: { min: 0, max: 100 },
+  calcium: { min: 0, max: 1000 },
+  ammonia: { min: 0, max: 50 },
+  nitrite: { min: 0, max: 50 },
+  nitrate: { min: 0, max: 500 },
+  ph: { min: 0, max: 14 },
+  alkalinity: { min: 0, max: 30 },
+  magnesium: { min: 0, max: 2000 },
 }
 
 // Mirrors backend/src/aquarium_parameter_thresholds.py's THRESHOLD_UNITS.
@@ -44,6 +61,13 @@ export const THRESHOLD_UNITS: Record<ThresholdParameter, string> = {
   temperature: 'celsius',
   salinity: 'ppt',
   phosphate: 'ppm',
+  calcium: 'ppm',
+  ammonia: 'mg/L',
+  nitrite: 'ppm',
+  nitrate: 'ppm',
+  ph: 'pH',
+  alkalinity: 'dKH',
+  magnesium: 'ppm',
 }
 
 export async function getThreshold(

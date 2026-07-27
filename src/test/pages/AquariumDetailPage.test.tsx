@@ -128,6 +128,51 @@ describe('AquariumDetailPage', () => {
     expect((within(salinityCard).getByLabelText('Max') as HTMLInputElement).value).toBe('')
   })
 
+  it('renders threshold cards for the newly supported water parameters', async () => {
+    renderPage()
+
+    await screen.findByRole('heading', { name: 'Living Room Reef' })
+
+    for (const label of [
+      'Calcium (ppm)',
+      'Magnesium (ppm)',
+      'Alkalinity (dKH)',
+      'pH (pH)',
+      'Ammonia (mg/L)',
+      'Nitrite (ppm)',
+      'Nitrate (ppm)',
+    ]) {
+      expect(parameterCard(label)).toBeInTheDocument()
+    }
+  })
+
+  it('saves a calcium threshold row', async () => {
+    const user = userEvent.setup()
+    setThresholdMock.mockResolvedValue({
+      aquariumId: 'aq-1',
+      parameter: 'calcium',
+      min: 400,
+      target: 420,
+      max: 450,
+      unit: 'ppm',
+    })
+
+    renderPage()
+    await screen.findByRole('heading', { name: 'Living Room Reef' })
+
+    const calciumCard = parameterCard('Calcium (ppm)')
+    await user.type(within(calciumCard).getByLabelText('Target'), '420')
+    await user.click(within(calciumCard).getByRole('button', { name: /save calcium limits/i }))
+
+    await waitFor(() => {
+      expect(setThresholdMock).toHaveBeenCalledWith('aq-1', 'calcium', {
+        min: null,
+        target: 420,
+        max: null,
+      })
+    })
+  })
+
   it('saves a parameter row and reflects the returned values', async () => {
     const user = userEvent.setup()
     setThresholdMock.mockResolvedValue({

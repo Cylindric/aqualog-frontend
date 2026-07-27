@@ -1,7 +1,17 @@
 import { ApiRequestError, apiDelete, apiGet, apiPost } from './client'
 
-export type MeasurementParameter = 'salinity' | 'phosphate'
-export type MeasurementUnit = 'ppt' | 'ppm'
+export type MeasurementParameter =
+  | 'salinity'
+  | 'phosphate'
+  | 'calcium'
+  | 'ammonia'
+  | 'nitrite'
+  | 'nitrate'
+  | 'ph'
+  | 'alkalinity'
+  | 'magnesium'
+
+export type MeasurementUnit = 'ppt' | 'ppm' | 'mg/L' | 'pH' | 'dKH'
 
 export interface MeasurementRecord {
   id: string
@@ -57,34 +67,153 @@ interface DeleteMeasurementResponse {
   }
 }
 
-export async function listSalinityMeasurements(
+// Mirrors backend/src/aquarium_measurements.py's PARAMETER_RULES supported_units
+// (the unit string the create-measurement request must send for each parameter).
+const REQUEST_UNITS: Record<MeasurementParameter, string> = {
+  salinity: 'ppt',
+  phosphate: 'ppm',
+  calcium: 'ppm',
+  ammonia: 'mg/l',
+  nitrite: 'ppm',
+  nitrate: 'ppm',
+  ph: 'ph',
+  alkalinity: 'dkh',
+  magnesium: 'ppm',
+}
+
+export function listSalinityMeasurements(
   aquariumId: string,
   signal?: AbortSignal,
 ): Promise<MeasurementRecord[]> {
   return listMeasurementsByParameter(aquariumId, 'salinity', signal)
 }
 
-export async function listPhosphateMeasurements(
+export function listPhosphateMeasurements(
   aquariumId: string,
   signal?: AbortSignal,
 ): Promise<MeasurementRecord[]> {
   return listMeasurementsByParameter(aquariumId, 'phosphate', signal)
 }
 
-export async function createSalinityMeasurement(
+export function listCalciumMeasurements(
+  aquariumId: string,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord[]> {
+  return listMeasurementsByParameter(aquariumId, 'calcium', signal)
+}
+
+export function listAmmoniaMeasurements(
+  aquariumId: string,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord[]> {
+  return listMeasurementsByParameter(aquariumId, 'ammonia', signal)
+}
+
+export function listNitriteMeasurements(
+  aquariumId: string,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord[]> {
+  return listMeasurementsByParameter(aquariumId, 'nitrite', signal)
+}
+
+export function listNitrateMeasurements(
+  aquariumId: string,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord[]> {
+  return listMeasurementsByParameter(aquariumId, 'nitrate', signal)
+}
+
+export function listPhMeasurements(
+  aquariumId: string,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord[]> {
+  return listMeasurementsByParameter(aquariumId, 'ph', signal)
+}
+
+export function listAlkalinityMeasurements(
+  aquariumId: string,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord[]> {
+  return listMeasurementsByParameter(aquariumId, 'alkalinity', signal)
+}
+
+export function listMagnesiumMeasurements(
+  aquariumId: string,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord[]> {
+  return listMeasurementsByParameter(aquariumId, 'magnesium', signal)
+}
+
+export function createSalinityMeasurement(
   aquariumId: string,
   input: CreateSalinityMeasurementInput,
   signal?: AbortSignal,
 ): Promise<MeasurementRecord> {
-  return createMeasurementByParameter(aquariumId, 'salinity', 'ppt', input, signal)
+  return createMeasurementByParameter(aquariumId, 'salinity', input, signal)
 }
 
-export async function createPhosphateMeasurement(
+export function createPhosphateMeasurement(
   aquariumId: string,
   input: CreateMeasurementInput,
   signal?: AbortSignal,
 ): Promise<MeasurementRecord> {
-  return createMeasurementByParameter(aquariumId, 'phosphate', 'ppm', input, signal)
+  return createMeasurementByParameter(aquariumId, 'phosphate', input, signal)
+}
+
+export function createCalciumMeasurement(
+  aquariumId: string,
+  input: CreateMeasurementInput,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord> {
+  return createMeasurementByParameter(aquariumId, 'calcium', input, signal)
+}
+
+export function createAmmoniaMeasurement(
+  aquariumId: string,
+  input: CreateMeasurementInput,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord> {
+  return createMeasurementByParameter(aquariumId, 'ammonia', input, signal)
+}
+
+export function createNitriteMeasurement(
+  aquariumId: string,
+  input: CreateMeasurementInput,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord> {
+  return createMeasurementByParameter(aquariumId, 'nitrite', input, signal)
+}
+
+export function createNitrateMeasurement(
+  aquariumId: string,
+  input: CreateMeasurementInput,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord> {
+  return createMeasurementByParameter(aquariumId, 'nitrate', input, signal)
+}
+
+export function createPhMeasurement(
+  aquariumId: string,
+  input: CreateMeasurementInput,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord> {
+  return createMeasurementByParameter(aquariumId, 'ph', input, signal)
+}
+
+export function createAlkalinityMeasurement(
+  aquariumId: string,
+  input: CreateMeasurementInput,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord> {
+  return createMeasurementByParameter(aquariumId, 'alkalinity', input, signal)
+}
+
+export function createMagnesiumMeasurement(
+  aquariumId: string,
+  input: CreateMeasurementInput,
+  signal?: AbortSignal,
+): Promise<MeasurementRecord> {
+  return createMeasurementByParameter(aquariumId, 'magnesium', input, signal)
 }
 
 export async function deleteMeasurement(
@@ -124,14 +253,13 @@ async function listMeasurementsByParameter(
 async function createMeasurementByParameter(
   aquariumId: string,
   parameter: MeasurementParameter,
-  unit: MeasurementUnit,
   input: CreateMeasurementInput,
   signal?: AbortSignal,
 ): Promise<MeasurementRecord> {
   const response = await apiPost<unknown>(
     `/api/v1/aquariums/${aquariumId}/measurements/${parameter}`,
     {
-      unit,
+      unit: REQUEST_UNITS[parameter],
       value: input.value,
       measured_at: input.measuredAt,
     },
@@ -146,14 +274,12 @@ async function createMeasurementByParameter(
 }
 
 function toMeasurementRecord(payload: MeasurementPayload): MeasurementRecord {
-  const parameter = payload.parameter === 'phosphate' ? 'phosphate' : 'salinity'
-
   return {
     id: payload.id,
     aquariumId: payload.aquarium_id,
-    parameter,
+    parameter: payload.parameter as MeasurementParameter,
     value: payload.value,
-    unit: payload.unit === 'ppm' ? 'ppm' : 'ppt',
+    unit: payload.unit as MeasurementUnit,
     rawValue: payload.raw_value,
     rawUnit: payload.raw_unit,
     measuredAt: payload.measured_at,
