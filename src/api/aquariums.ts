@@ -81,6 +81,18 @@ export async function createAquarium(
   return toAquariumRecord(response.data)
 }
 
+export async function getAquarium(
+  aquariumId: string,
+  signal?: AbortSignal,
+): Promise<AquariumRecord> {
+  const response = await apiGet<unknown>(`/api/v1/aquariums/${aquariumId}`, undefined, signal)
+  if (!isAquariumResponse(response)) {
+    throw new ApiRequestError('Received an unexpected aquarium response shape from the API.', 502)
+  }
+
+  return toAquariumRecord(response.data)
+}
+
 export async function updateAquarium(
   aquariumId: string,
   input: UpdateAquariumInput,

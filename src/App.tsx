@@ -25,6 +25,10 @@ const AquariumsPage = lazy(() =>
   import('./pages/AquariumsPage').then((module) => ({ default: module.AquariumsPage })),
 )
 
+const AquariumDetailPage = lazy(() =>
+  import('./pages/AquariumDetailPage').then((module) => ({ default: module.AquariumDetailPage })),
+)
+
 const MeasurementsPage = lazy(() =>
   import('./pages/MeasurementsPage').then((module) => ({ default: module.MeasurementsPage })),
 )
@@ -99,6 +103,7 @@ function AuthenticatedApp() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/calculator" element={<CalculatorPage />} />
           <Route path="/aquariums" element={<AquariumsPage />} />
+          <Route path="/aquariums/:id" element={<AquariumDetailPage />} />
           <Route path="/measurements" element={<MeasurementsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<NotFoundPage />} />

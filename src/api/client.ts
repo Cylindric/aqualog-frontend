@@ -20,7 +20,7 @@ export class ApiRequestError extends Error {
   }
 }
 
-type ApiHttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+type ApiHttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
 interface ApiRequestOptions {
   method?: ApiHttpMethod
@@ -245,6 +245,17 @@ export async function apiPatch<T>(
   signal?: AbortSignal,
 ): Promise<T> {
   return apiRequest<T>(path, { method: 'PATCH', body, signal })
+}
+
+/**
+ * Performs an authenticated PUT request.
+ */
+export async function apiPut<T>(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  return apiRequest<T>(path, { method: 'PUT', body, signal })
 }
 
 /**

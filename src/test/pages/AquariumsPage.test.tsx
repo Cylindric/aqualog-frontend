@@ -2,14 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
+import { MemoryRouter, Route, Routes, useParams } from 'react-router'
 import { Provider } from '../../components/ui/provider'
 import { AquariumsPage } from '../../pages/AquariumsPage'
-import {
-  createAquarium,
-  deleteAquarium,
-  listAquariums,
-  updateAquarium,
-} from '../../api/aquariums'
+import { createAquarium, deleteAquarium, listAquariums } from '../../api/aquariums'
 
 vi.mock('../../api/aquariums', () => ({
   listAquariums: vi.fn(),
@@ -39,11 +35,32 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 const listAquariumsMock = vi.mocked(listAquariums)
 const createAquariumMock = vi.mocked(createAquarium)
-const updateAquariumMock = vi.mocked(updateAquarium)
 const deleteAquariumMock = vi.mocked(deleteAquarium)
 
 function renderPage() {
-  return render(<AquariumsPage />, { wrapper: Wrapper })
+  return render(
+    <MemoryRouter>
+      <AquariumsPage />
+    </MemoryRouter>,
+    { wrapper: Wrapper },
+  )
+}
+
+function DetailRouteStub() {
+  const { id } = useParams<{ id: string }>()
+  return <div data-testid="detail-route">{id}</div>
+}
+
+function renderPageWithRouter() {
+  return render(
+    <MemoryRouter initialEntries={['/aquariums']}>
+      <Routes>
+        <Route path="/aquariums" element={<AquariumsPage />} />
+        <Route path="/aquariums/:id" element={<DetailRouteStub />} />
+      </Routes>
+    </MemoryRouter>,
+    { wrapper: Wrapper },
+  )
 }
 
 beforeEach(() => {
@@ -66,14 +83,6 @@ beforeEach(() => {
     volumeLiters: 76,
     createdAt: '2026-07-18T11:00:00Z',
     updatedAt: '2026-07-18T11:00:00Z',
-  })
-  updateAquariumMock.mockResolvedValue({
-    id: 'aq-1',
-    name: 'Living Room Reef Updated',
-    type: 'Saltwater Reef',
-    volumeLiters: 300,
-    createdAt: '2026-07-18T10:00:00Z',
-    updatedAt: '2026-07-18T12:00:00Z',
   })
   deleteAquariumMock.mockResolvedValue(undefined)
 })
@@ -120,33 +129,14 @@ describe('AquariumsPage', () => {
     expect(await screen.findByText('Office Nano')).toBeInTheDocument()
   })
 
-  it('updates a record through API and refreshes the row', async () => {
+  it('navigates to the aquarium detail page when Edit is clicked', async () => {
     const user = userEvent.setup()
-    renderPage()
+    renderPageWithRouter()
 
     await screen.findByText('Living Room Reef')
     await user.click(screen.getByRole('button', { name: /edit/i }))
 
-    const nameInput = await screen.findByLabelText(/aquarium name/i)
-    await user.clear(nameInput)
-    await user.type(nameInput, 'Living Room Reef Updated')
-    const volumeInput = await screen.findByLabelText(/^volume$/i)
-    await user.clear(volumeInput)
-    await user.type(volumeInput, '300')
-    await user.click(screen.getByRole('button', { name: /save changes/i }))
-
-    await waitFor(() => {
-      expect(updateAquariumMock).toHaveBeenCalledWith(
-        'aq-1',
-        {
-          name: 'Living Room Reef Updated',
-          type: 'Saltwater Reef',
-          volume: { value: 300, unit: 'L' },
-        },
-      )
-    })
-
-    expect(await screen.findByText('Living Room Reef Updated')).toBeInTheDocument()
+    expect(await screen.findByTestId('detail-route')).toHaveTextContent('aq-1')
   })
 
   it('requires confirmation before delete and deletes only after confirmation', async () => {
