@@ -40,3 +40,10 @@ def _runtime_config() -> dict[str, str]:
 @app.get("/api/runtime-config")
 def get_runtime_config() -> dict[str, str]:
     return _runtime_config()
+
+@app.get("/api/health")
+def health_check() -> dict[str, str]:
+    return {
+        "status": "ok",
+        "version": os.getenv("AQUALOG_APP_VERSION", "unknown"),
+    }
