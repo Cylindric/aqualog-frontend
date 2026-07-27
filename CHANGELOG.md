@@ -1,3 +1,9 @@
+## v1.12.0 (2026-07-27)
+
+### Feat
+
+- add calcium, ammonia, nitrite, nitrate, pH, alkalinity, and magnesium parameters
+
 ## v1.11.0 (2026-07-27)
 
 ### Feat
