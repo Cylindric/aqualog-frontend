@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { Provider } from '../../components/ui/provider'
@@ -276,16 +276,21 @@ describe('MeasurementsPage', () => {
     expect(phosphateCard).toHaveTextContent('0.070 ppm')
   })
 
-  it('shows an "unavailable" history card for a parameter with no readings yet', async () => {
+  it('hides the history card for a parameter with no readings yet by default, and shows it when "show empty" is checked', async () => {
+    const user = userEvent.setup()
     renderPage()
 
     await screen.findByTestId('salinity-history-table')
 
-    expect(screen.getByText(/calcium history unavailable/i)).toBeInTheDocument()
+    expect(screen.queryByText(/calcium history unavailable/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: /show empty tables and charts/i }))
+
+    expect(await screen.findByText(/calcium history unavailable/i)).toBeInTheDocument()
     expect(screen.getByText(/no calcium entries are available yet/i)).toBeInTheDocument()
   })
 
-  it('deletes a measurement row and refreshes both histories', async () => {
+  it('deletes a measurement row after confirming, and refreshes both histories', async () => {
     const user = userEvent.setup()
     renderPage()
 
@@ -295,12 +300,52 @@ describe('MeasurementsPage', () => {
     const deleteButton = within(salinityCard).getAllByRole('button', { name: /delete/i })[0]
     await user.click(deleteButton)
 
+    expect(await screen.findByRole('heading', { name: /delete measurement\?/i })).toBeInTheDocument()
+    expect(deleteMeasurementMock).not.toHaveBeenCalled()
+
+    const dialog = screen.getByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: /^delete$/i }))
+
     await waitFor(() => {
       expect(deleteMeasurementMock).toHaveBeenCalledWith('aq-1', 'salinity', 's-2')
     })
 
     expect(listSalinityMeasurementsMock).toHaveBeenCalledTimes(2)
     expect(listPhosphateMeasurementsMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('cancels a pending delete without calling the API', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await screen.findByTestId('salinity-history-table')
+
+    const salinityCard = screen.getByTestId('salinity-history-table')
+    const deleteButton = within(salinityCard).getAllByRole('button', { name: /delete/i })[0]
+    await user.click(deleteButton)
+
+    await screen.findByRole('heading', { name: /delete measurement\?/i })
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: /delete measurement\?/i })).not.toBeInTheDocument()
+    })
+    expect(deleteMeasurementMock).not.toHaveBeenCalled()
+  })
+
+  it('deletes a measurement immediately without confirmation when shift-clicked', async () => {
+    renderPage()
+
+    await screen.findByTestId('salinity-history-table')
+
+    const salinityCard = screen.getByTestId('salinity-history-table')
+    const deleteButton = within(salinityCard).getAllByRole('button', { name: /delete/i })[0]
+    fireEvent.click(deleteButton, { shiftKey: true })
+
+    await waitFor(() => {
+      expect(deleteMeasurementMock).toHaveBeenCalledWith('aq-1', 'salinity', 's-2')
+    })
+    expect(screen.queryByRole('heading', { name: /delete measurement\?/i })).not.toBeInTheDocument()
   })
 
   it('shows recoverable history error and retries', async () => {
@@ -328,6 +373,9 @@ describe('MeasurementsPage', () => {
     const phosphateCard = screen.getByTestId('phosphate-history-table')
     const deleteButton = within(phosphateCard).getAllByRole('button', { name: /delete/i })[0]
     await user.click(deleteButton)
+
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: /^delete$/i }))
 
     expect(await screen.findByText(/could not delete measurement/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /retry delete/i })).toBeInTheDocument()
@@ -363,14 +411,20 @@ describe('MeasurementsPage', () => {
     expect(getThresholdMock).not.toHaveBeenCalled()
   })
 
-  it('shows phosphate chart fallback when phosphate data is sparse', async () => {
+  it('hides phosphate chart fallback by default when phosphate data is sparse, and shows it when "show empty" is checked', async () => {
+    const user = userEvent.setup()
     listPhosphateMeasurementsMock.mockResolvedValueOnce([
       measurementFixture('p-1', 'phosphate', 0.08, '2026-07-18T10:00:00Z'),
     ])
 
     renderPage()
 
-    await screen.findByText(/phosphate trend unavailable/i)
+    await screen.findByTestId('phosphate-history-table')
+    expect(screen.queryByText(/phosphate trend unavailable/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: /show empty tables and charts/i }))
+
+    expect(await screen.findByText(/phosphate trend unavailable/i)).toBeInTheDocument()
     expect(screen.getByText('0.080 ppm')).toBeInTheDocument()
   })
 })
