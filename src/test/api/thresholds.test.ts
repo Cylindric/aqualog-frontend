@@ -122,6 +122,38 @@ describe('thresholds api', () => {
     expect(options.body).toBe(JSON.stringify({ min: 0, target: 0.05, max: 0.1 }))
   })
 
+  it('gets a calcium threshold using the "ppm" unit', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        request_id: 'req-ca-1',
+        data: {
+          aquarium_id: 'aq-1',
+          parameter: 'calcium',
+          target: 420,
+          min: 400,
+          max: 450,
+          unit: 'ppm',
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getThreshold('aq-1', 'calcium')).resolves.toEqual({
+      aquariumId: 'aq-1',
+      parameter: 'calcium',
+      target: 420,
+      min: 400,
+      max: 450,
+      unit: 'ppm',
+    })
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/aquariums/aq-1/thresholds/calcium')
+  })
+
   it('rejects with validation errors on a 422 response', async () => {
     vi.stubGlobal(
       'fetch',

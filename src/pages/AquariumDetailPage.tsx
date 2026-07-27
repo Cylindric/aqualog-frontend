@@ -39,12 +39,30 @@ const AQUARIUM_TYPES = [
   'Freshwater Community',
 ]
 
-const THRESHOLD_PARAMETERS: ThresholdParameter[] = ['temperature', 'salinity', 'phosphate']
+const THRESHOLD_PARAMETERS: ThresholdParameter[] = [
+  'temperature',
+  'salinity',
+  'phosphate',
+  'calcium',
+  'magnesium',
+  'alkalinity',
+  'ph',
+  'ammonia',
+  'nitrite',
+  'nitrate',
+]
 
 const PARAMETER_LABELS: Record<ThresholdParameter, string> = {
   temperature: 'Temperature',
   salinity: 'Salinity',
   phosphate: 'Phosphate',
+  calcium: 'Calcium',
+  magnesium: 'Magnesium',
+  alkalinity: 'Alkalinity',
+  ph: 'pH',
+  ammonia: 'Ammonia',
+  nitrite: 'Nitrite',
+  nitrate: 'Nitrate',
 }
 
 interface ThresholdFieldValues {
@@ -80,6 +98,13 @@ function defaultThresholdRows(): Record<ThresholdParameter, ThresholdRowState> {
     temperature: defaultThresholdRowState(),
     salinity: defaultThresholdRowState(),
     phosphate: defaultThresholdRowState(),
+    calcium: defaultThresholdRowState(),
+    magnesium: defaultThresholdRowState(),
+    alkalinity: defaultThresholdRowState(),
+    ph: defaultThresholdRowState(),
+    ammonia: defaultThresholdRowState(),
+    nitrite: defaultThresholdRowState(),
+    nitrate: defaultThresholdRowState(),
   }
 }
 
@@ -145,32 +170,34 @@ export function AquariumDetailPage() {
   }
 
   async function loadThresholds(aquariumId: string, signal?: AbortSignal) {
-    for (const parameter of THRESHOLD_PARAMETERS) {
-      try {
-        const record = await getThreshold(aquariumId, parameter, signal)
-        setThresholdRows((current) => ({
-          ...current,
-          [parameter]: {
-            ...current[parameter],
-            values: {
-              min: record.min ?? '',
-              target: record.target ?? '',
-              max: record.max ?? '',
+    await Promise.all(
+      THRESHOLD_PARAMETERS.map(async (parameter) => {
+        try {
+          const record = await getThreshold(aquariumId, parameter, signal)
+          setThresholdRows((current) => ({
+            ...current,
+            [parameter]: {
+              ...current[parameter],
+              values: {
+                min: record.min ?? '',
+                target: record.target ?? '',
+                max: record.max ?? '',
+              },
+              loading: false,
             },
-            loading: false,
-          },
-        }))
-      } catch (error) {
-        setThresholdRows((current) => ({
-          ...current,
-          [parameter]: {
-            ...current[parameter],
-            loading: false,
-            error: toUserMessage(error),
-          },
-        }))
-      }
-    }
+          }))
+        } catch (error) {
+          setThresholdRows((current) => ({
+            ...current,
+            [parameter]: {
+              ...current[parameter],
+              loading: false,
+              error: toUserMessage(error),
+            },
+          }))
+        }
+      }),
+    )
   }
 
   const handleRetry = () => {
