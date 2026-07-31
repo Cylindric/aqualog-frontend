@@ -28,7 +28,7 @@ export function Shell({ children }: ShellProps) {
   const auth = useAuth()
 
   return (
-    <Flex direction="column" mih="100dvh">
+    <Flex direction="column" h="100dvh" style={{ overflow: 'hidden' }}>
       {/* Header */}
       <Flex
         component="header"
@@ -64,15 +64,23 @@ export function Shell({ children }: ShellProps) {
       {/* Compact mobile navigation */}
       {state === 'ready' && <CompactPrimaryNav />}
 
-      <Flex flex={1} mih={0}>
+      <Flex flex={1} mih={0} style={{ overflow: 'hidden' }}>
         {/* Double navbar on tablet and desktop */}
         {state === 'ready' && <DesktopDoubleNavbar />}
 
-        {/* Main content */}
-        <Box component="main" flex={1} px="md" pt="md" pb="md" maw={900} w="100%" mx="auto">
-          {state === 'loading' && <LoadingState />}
-          {state === 'error' && <ErrorState message={errorMessage} onRetry={retry} />}
-          {state === 'ready' && children}
+        {/* Main content, scrolls independently of the nav */}
+        <Box
+          component="main"
+          flex={1}
+          mih={0}
+          h="100%"
+          style={{ overflowY: 'auto' }}
+        >
+          <Box px="md" pt="md" pb="md" maw={900} w="100%" mx="auto">
+            {state === 'loading' && <LoadingState />}
+            {state === 'error' && <ErrorState message={errorMessage} onRetry={retry} />}
+            {state === 'ready' && children}
+          </Box>
         </Box>
       </Flex>
 
@@ -98,7 +106,11 @@ function DesktopDoubleNavbar() {
       data-testid="desktop-double-navbar"
       visibleFrom="sm"
       h="100%"
-      style={{ borderRight: '1px solid var(--mantine-color-gray-3)' }}
+      style={{
+        borderRight: '1px solid var(--mantine-color-gray-3)',
+        flexShrink: 0,
+        overflowY: 'auto',
+      }}
     >
       <Stack gap="xs" p="sm" align="center" justify="start" style={{ borderRight: '1px solid var(--mantine-color-gray-2)' }}>
         {PRIMARY_NAV_ITEMS.map((item) => (

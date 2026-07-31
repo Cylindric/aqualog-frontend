@@ -30,6 +30,10 @@ Taskfile (`task <name>`) wraps some of the above plus Docker packaging:
 
 ## Architecture
 
+### Frontend UI
+
+The app is built using the React framework with the Mantine 9 component library. The documentation for Mantine is here: https://mantine.dev/llms.txt
+
 ### Runtime config, not build-time config
 
 The app is built once and reconfigured per-environment at runtime, not rebuilt. `src/config.ts::loadRuntimeConfig()` is awaited in `src/main.tsx` before React renders; it fetches `/api/runtime-config` and populates a module-level `config` object (API base URL, OIDC authority/client/redirect URIs/scope, app version string). `isConfigured()` / `hasOidcConfig()` / `configErrors()` gate rendering — `App.tsx` shows `ConfigErrorPage` if `isConfigured()` is false.
