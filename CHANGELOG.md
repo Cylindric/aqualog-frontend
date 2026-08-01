@@ -1,3 +1,9 @@
+## v1.15.0 (2026-08-01)
+
+### Feat
+
+- show username in header authenticated badge
+
 ## v1.14.1 (2026-08-01)
 
 ### Fix
