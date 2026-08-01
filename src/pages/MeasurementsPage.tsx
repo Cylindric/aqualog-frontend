@@ -180,7 +180,7 @@ export function MeasurementsPage() {
   }
 
   const handleFormSubmit = async () => {
-    const validation = validateMeasurement(formValues)
+    const validation = validateMeasurement(formValues, parameters)
     if (Object.keys(validation).length > 0) {
       setFormErrors(validation)
       return
@@ -319,17 +319,29 @@ export function MeasurementsPage() {
     setViewState('loading')
     setHistoryError('')
 
-    try {
-      const results = await Promise.all(
-        parameters.map((parameter) => listMeasurementsByParameter(aquariumId, parameter.slug, signal)),
-      )
+    // A parameter can appear in the catalog before the backend's fixed
+    // measurement rule set recognizes it, so isolate failures per-parameter
+    // instead of letting one unsupported parameter blank out the whole page.
+    // Only surface the error banner if every request failed.
+    const results = await Promise.allSettled(
+      parameters.map((parameter) => listMeasurementsByParameter(aquariumId, parameter.slug, signal)),
+    )
 
-      setMeasurements(results.flat())
-      setViewState('ready')
-    } catch (error) {
-      setHistoryError(toUserMessage(error))
+    const fulfilled = results.filter(
+      (result): result is PromiseFulfilledResult<MeasurementRecord[]> => result.status === 'fulfilled',
+    )
+    const firstRejection = results.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    )
+
+    if (fulfilled.length === 0 && firstRejection) {
+      setHistoryError(toUserMessage(firstRejection.reason))
       setViewState('error')
+      return
     }
+
+    setMeasurements(fulfilled.flatMap((result) => result.value))
+    setViewState('ready')
   }
 
   async function loadThresholds(aquariumId: string, parameters: ParameterConfig[], signal?: AbortSignal) {
@@ -558,7 +570,9 @@ export function MeasurementsPage() {
         <Stack gap="md">
           <Text size="sm">
             Are you sure you want to delete this{' '}
-            {pendingDelete ? PARAMETERS.find((parameter) => parameter.key === pendingDelete.parameter)?.label : ''}{' '}
+            {pendingDelete
+              ? parameters.find((parameter) => parameter.slug === pendingDelete.parameter)?.displayName
+              : ''}{' '}
             measurement? This cannot be undone.
           </Text>
           <Group justify="flex-end">
@@ -600,21 +614,21 @@ function MeasurementHistoryTable({
   onDelete,
   showEmpty,
 }: MeasurementHistoryTableProps) {
-  const title = `${parameter.label} History`
+  const title = `${parameter.displayName} History`
 
   if (measurements.length === 0) {
     if (!showEmpty) return null
 
     return (
       <Alert color="gray" title={`${title} unavailable`}>
-        <Text size="sm">No {parameter.label.toLowerCase()} entries are available yet for this aquarium.</Text>
+        <Text size="sm">No {parameter.displayName.toLowerCase()} entries are available yet for this aquarium.</Text>
       </Alert>
     )
   }
 
   return (
     <Card withBorder>
-      <Card.Section p="md" data-testid={`${parameter.key}-history-table`}>
+      <Card.Section p="md" data-testid={`${parameter.slug}-history-table`}>
         <Stack gap="xs">
           <Text fw={600}>{title}</Text>
           <Table withTableBorder highlightOnHover>
@@ -630,7 +644,7 @@ function MeasurementHistoryTable({
                 <Table.Tr key={measurement.id}>
                   <Table.Td>{formatDate(measurement.measuredAt)}</Table.Td>
                   <Table.Td>
-                    {measurement.value.toFixed(parameter.decimalScale)} {parameter.unit}
+                    {measurement.value} {parameter.unit}
                   </Table.Td>
                   <Table.Td ta="right">
                     <Button
@@ -692,9 +706,9 @@ function ParameterTrendChart({
     if (!showEmpty) return null
 
     return (
-      <Alert color="gray" title={`${parameter.label} trend unavailable`}>
+      <Alert color="gray" title={`${parameter.displayName} trend unavailable`}>
         <Text size="sm">
-          At least two {parameter.label.toLowerCase()} measurements are needed to render a trend line.
+          At least two {parameter.displayName.toLowerCase()} measurements are needed to render a trend line.
         </Text>
       </Alert>
     )
@@ -703,20 +717,18 @@ function ParameterTrendChart({
   const ordered = [...measurements].sort((a, b) => Date.parse(a.measuredAt) - Date.parse(b.measuredAt))
   const chartData = ordered.map((item) => ({
     measuredAt: formatShortDate(item.measuredAt),
-    [parameter.key]: item.value,
+    [parameter.slug]: item.value,
   }))
-  const values = chartData.map((item) => item[parameter.key] as number)
-  const visuals = computeThresholdVisuals(threshold, values, parameter.label, (value) =>
-    value.toFixed(parameter.decimalScale),
-  )
+  const values = chartData.map((item) => item[parameter.slug] as number)
+  const visuals = computeThresholdVisuals(threshold, values, parameter.displayName, (value) => String(value))
 
   return (
     <Card withBorder>
       <Card.Section p="md">
         <Stack gap="xs">
-          <Text fw={600}>{parameter.label} Trend ({parameter.unit})</Text>
+          <Text fw={600}>{parameter.displayName} Trend ({parameter.unit})</Text>
           <Text c="dimmed" size="sm">
-            Displaying all recorded {parameter.label.toLowerCase()} measurements for the selected aquarium.
+            Displaying all recorded {parameter.displayName.toLowerCase()} measurements for the selected aquarium.
           </Text>
           <Box ref={chartContainerRef} mih={240}>
             {canRenderChart ? (
@@ -728,12 +740,11 @@ function ParameterTrendChart({
                 gradientStops={visuals.gradientStops}
                 yAxisProps={{ domain: [visuals.yDomainMin, visuals.yDomainMax] }}
                 referenceLines={visuals.referenceLines}
-                series={[{ name: parameter.key, label: parameter.label }]}
+                series={[{ name: parameter.slug, label: parameter.displayName }]}
                 curveType="monotone"
                 withDots
                 withLegend
                 unit={` ${parameter.unit}`}
-                valueFormatter={(value) => value.toFixed(parameter.decimalScale)}
                 tooltipAnimationDuration={200}
               />
             ) : (
@@ -797,22 +808,23 @@ function computeThresholdVisuals(
 
 function validateMeasurement(
   values: MeasurementFormValues,
+  parameters: ParameterConfig[],
 ): Partial<Record<MeasurementParameter | 'measuredAtLocal', string>> {
   const errors: Partial<Record<MeasurementParameter | 'measuredAtLocal', string>> = {}
 
-  const hasAnyValue = PARAMETERS.some((parameter) => values.values[parameter.key] !== '')
+  const hasAnyValue = parameters.some((parameter) => values.values[parameter.slug] !== '')
 
   if (!hasAnyValue) {
     const message = 'Enter at least one measurement value to submit.'
-    for (const parameter of PARAMETERS) {
-      errors[parameter.key] = message
+    for (const parameter of parameters) {
+      errors[parameter.slug] = message
     }
   }
 
-  for (const parameter of PARAMETERS) {
-    const value = values.values[parameter.key]
+  for (const parameter of parameters) {
+    const value = values.values[parameter.slug]
     if (value !== '' && (Number.isNaN(Number(value)) || Number(value) <= 0)) {
-      errors[parameter.key] = `Enter a ${parameter.label.toLowerCase()} value greater than 0 ${parameter.unit}.`
+      errors[parameter.slug] = `Enter a ${parameter.displayName.toLowerCase()} value greater than 0 ${parameter.unit}.`
     }
   }
 

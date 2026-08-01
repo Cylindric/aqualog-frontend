@@ -6,49 +6,26 @@ import { Provider } from '../../components/ui/provider'
 import { MeasurementsPage } from '../../pages/MeasurementsPage'
 import { listAquariums } from '../../api/aquariums'
 import {
-  createAmmoniaMeasurement,
-  createCalciumMeasurement,
-  createPhosphateMeasurement,
-  createSalinityMeasurement,
+  createMeasurementByParameter,
   deleteMeasurement,
-  listAlkalinityMeasurements,
-  listAmmoniaMeasurements,
-  listCalciumMeasurements,
-  listMagnesiumMeasurements,
-  listNitrateMeasurements,
-  listNitriteMeasurements,
-  listPhMeasurements,
-  listPhosphateMeasurements,
-  listSalinityMeasurements,
+  listMeasurementsByParameter,
   type MeasurementParameter,
   type MeasurementRecord,
-  type MeasurementUnit,
 } from '../../api/measurements'
+import { listParameters, type ParameterRecord } from '../../api/parameters'
 import { getThreshold, THRESHOLD_UNITS, type ThresholdParameter } from '../../api/thresholds'
 
 vi.mock('../../api/aquariums', () => ({
   listAquariums: vi.fn(),
 }))
 
+vi.mock('../../api/parameters', () => ({
+  listParameters: vi.fn(),
+}))
+
 vi.mock('../../api/measurements', () => ({
-  listSalinityMeasurements: vi.fn(),
-  listPhosphateMeasurements: vi.fn(),
-  listCalciumMeasurements: vi.fn(),
-  listMagnesiumMeasurements: vi.fn(),
-  listAlkalinityMeasurements: vi.fn(),
-  listPhMeasurements: vi.fn(),
-  listAmmoniaMeasurements: vi.fn(),
-  listNitriteMeasurements: vi.fn(),
-  listNitrateMeasurements: vi.fn(),
-  createSalinityMeasurement: vi.fn(),
-  createPhosphateMeasurement: vi.fn(),
-  createCalciumMeasurement: vi.fn(),
-  createMagnesiumMeasurement: vi.fn(),
-  createAlkalinityMeasurement: vi.fn(),
-  createPhMeasurement: vi.fn(),
-  createAmmoniaMeasurement: vi.fn(),
-  createNitriteMeasurement: vi.fn(),
-  createNitrateMeasurement: vi.fn(),
+  listMeasurementsByParameter: vi.fn(),
+  createMeasurementByParameter: vi.fn(),
   deleteMeasurement: vi.fn(),
 }))
 
@@ -65,33 +42,27 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 const listAquariumsMock = vi.mocked(listAquariums)
-const listSalinityMeasurementsMock = vi.mocked(listSalinityMeasurements)
-const listPhosphateMeasurementsMock = vi.mocked(listPhosphateMeasurements)
-const listCalciumMeasurementsMock = vi.mocked(listCalciumMeasurements)
-const listMagnesiumMeasurementsMock = vi.mocked(listMagnesiumMeasurements)
-const listAlkalinityMeasurementsMock = vi.mocked(listAlkalinityMeasurements)
-const listPhMeasurementsMock = vi.mocked(listPhMeasurements)
-const listAmmoniaMeasurementsMock = vi.mocked(listAmmoniaMeasurements)
-const listNitriteMeasurementsMock = vi.mocked(listNitriteMeasurements)
-const listNitrateMeasurementsMock = vi.mocked(listNitrateMeasurements)
-const createSalinityMeasurementMock = vi.mocked(createSalinityMeasurement)
-const createPhosphateMeasurementMock = vi.mocked(createPhosphateMeasurement)
-const createCalciumMeasurementMock = vi.mocked(createCalciumMeasurement)
-const createAmmoniaMeasurementMock = vi.mocked(createAmmoniaMeasurement)
+const listParametersMock = vi.mocked(listParameters)
+const listMeasurementsByParameterMock = vi.mocked(listMeasurementsByParameter)
+const createMeasurementByParameterMock = vi.mocked(createMeasurementByParameter)
 const deleteMeasurementMock = vi.mocked(deleteMeasurement)
 const getThresholdMock = vi.mocked(getThreshold)
 
-const UNIT_BY_PARAMETER: Record<MeasurementParameter, MeasurementUnit> = {
-  salinity: 'ppt',
-  phosphate: 'ppm',
-  calcium: 'ppm',
-  magnesium: 'ppm',
-  alkalinity: 'dKH',
-  ph: 'pH',
-  ammonia: 'mg/L',
-  nitrite: 'ppm',
-  nitrate: 'ppm',
-}
+const PARAMETER_CATALOG: ParameterRecord[] = [
+  { slug: 'alkalinity', displayName: 'Alkalinity', description: null, unit: 'dKH', createdAt: '2026-07-18T10:00:00Z', updatedAt: '2026-07-18T10:00:00Z' },
+  { slug: 'ammonia', displayName: 'Ammonia', description: null, unit: 'mg/L', createdAt: '2026-07-18T10:00:00Z', updatedAt: '2026-07-18T10:00:00Z' },
+  { slug: 'calcium', displayName: 'Calcium', description: null, unit: 'ppm', createdAt: '2026-07-18T10:00:00Z', updatedAt: '2026-07-18T10:00:00Z' },
+  { slug: 'magnesium', displayName: 'Magnesium', description: null, unit: 'ppm', createdAt: '2026-07-18T10:00:00Z', updatedAt: '2026-07-18T10:00:00Z' },
+  { slug: 'nitrate', displayName: 'Nitrate', description: null, unit: 'ppm', createdAt: '2026-07-18T10:00:00Z', updatedAt: '2026-07-18T10:00:00Z' },
+  { slug: 'nitrite', displayName: 'Nitrite', description: null, unit: 'ppm', createdAt: '2026-07-18T10:00:00Z', updatedAt: '2026-07-18T10:00:00Z' },
+  { slug: 'ph', displayName: 'pH', description: null, unit: 'pH', createdAt: '2026-07-18T10:00:00Z', updatedAt: '2026-07-18T10:00:00Z' },
+  { slug: 'phosphate', displayName: 'Phosphate', description: null, unit: 'ppm', createdAt: '2026-07-18T10:00:00Z', updatedAt: '2026-07-18T10:00:00Z' },
+  { slug: 'salinity', displayName: 'Salinity', description: null, unit: 'ppt', createdAt: '2026-07-18T10:00:00Z', updatedAt: '2026-07-18T10:00:00Z' },
+]
+
+const UNIT_BY_PARAMETER: Record<MeasurementParameter, string> = Object.fromEntries(
+  PARAMETER_CATALOG.map((parameter) => [parameter.slug, parameter.unit as string]),
+)
 
 function measurementFixture(
   id: string,
@@ -110,6 +81,23 @@ function measurementFixture(
     rawUnit: unit,
     measuredAt,
     createdAt: measuredAt,
+  }
+}
+
+function defaultMeasurementsFor(parameter: MeasurementParameter): MeasurementRecord[] {
+  switch (parameter) {
+    case 'salinity':
+      return [
+        measurementFixture('s-1', 'salinity', 34, '2026-07-18T10:00:00Z'),
+        measurementFixture('s-2', 'salinity', 35, '2026-07-19T10:00:00Z'),
+      ]
+    case 'phosphate':
+      return [
+        measurementFixture('p-1', 'phosphate', 0.07, '2026-07-18T10:00:00Z'),
+        measurementFixture('p-2', 'phosphate', 0.12, '2026-07-19T10:00:00Z'),
+      ]
+    default:
+      return []
   }
 }
 
@@ -142,33 +130,14 @@ beforeEach(() => {
     },
   ])
 
-  listSalinityMeasurementsMock.mockResolvedValue([
-    measurementFixture('s-1', 'salinity', 34, '2026-07-18T10:00:00Z'),
-    measurementFixture('s-2', 'salinity', 35, '2026-07-19T10:00:00Z'),
-  ])
-  listPhosphateMeasurementsMock.mockResolvedValue([
-    measurementFixture('p-1', 'phosphate', 0.07, '2026-07-18T10:00:00Z'),
-    measurementFixture('p-2', 'phosphate', 0.12, '2026-07-19T10:00:00Z'),
-  ])
-  listCalciumMeasurementsMock.mockResolvedValue([])
-  listMagnesiumMeasurementsMock.mockResolvedValue([])
-  listAlkalinityMeasurementsMock.mockResolvedValue([])
-  listPhMeasurementsMock.mockResolvedValue([])
-  listAmmoniaMeasurementsMock.mockResolvedValue([])
-  listNitriteMeasurementsMock.mockResolvedValue([])
-  listNitrateMeasurementsMock.mockResolvedValue([])
+  listParametersMock.mockResolvedValue(PARAMETER_CATALOG)
 
-  createSalinityMeasurementMock.mockResolvedValue(
-    measurementFixture('s-3', 'salinity', 35.5, '2026-07-20T10:00:00Z'),
+  listMeasurementsByParameterMock.mockImplementation(async (_aquariumId, parameter) =>
+    defaultMeasurementsFor(parameter),
   )
-  createPhosphateMeasurementMock.mockResolvedValue(
-    measurementFixture('p-3', 'phosphate', 0.08, '2026-07-20T10:00:00Z'),
-  )
-  createCalciumMeasurementMock.mockResolvedValue(
-    measurementFixture('c-1', 'calcium', 420, '2026-07-20T10:00:00Z'),
-  )
-  createAmmoniaMeasurementMock.mockResolvedValue(
-    measurementFixture('a-1', 'ammonia', 0.25, '2026-07-20T10:00:00Z'),
+
+  createMeasurementByParameterMock.mockImplementation(async (_aquariumId, parameter, input) =>
+    measurementFixture(`new-${parameter}`, parameter, input.value, input.measuredAt),
   )
 
   deleteMeasurementMock.mockResolvedValue()
@@ -181,24 +150,30 @@ afterEach(() => {
 })
 
 describe('MeasurementsPage', () => {
-  it('renders a value input for every supported parameter', async () => {
+  it('renders a value input for every parameter returned by the API', async () => {
     renderPage()
 
     await screen.findByRole('heading', { name: /aquarium measurements/i })
 
-    for (const [label, unit] of [
-      ['salinity', 'ppt'],
-      ['phosphate', 'ppm'],
-      ['calcium', 'ppm'],
-      ['magnesium', 'ppm'],
-      ['alkalinity', 'dKH'],
-      ['ammonia', 'mg/L'],
-      ['nitrite', 'ppm'],
-      ['nitrate', 'ppm'],
-    ] as const) {
-      expect(screen.getByLabelText(new RegExp(`${label} \\(${unit}\\)`, 'i'))).toBeInTheDocument()
+    for (const parameter of PARAMETER_CATALOG) {
+      expect(screen.getByLabelText(`${parameter.displayName} (${parameter.unit})`)).toBeInTheDocument()
     }
-    expect(screen.getByLabelText(/^ph \(ph\)/i)).toBeInTheDocument()
+  })
+
+  it('constructs inputs dynamically from whatever the API returns, without hardcoding', async () => {
+    listParametersMock.mockResolvedValue([
+      { slug: 'temperature', displayName: 'Temperature', description: null, unit: 'celsius', createdAt: '2026-07-18T10:00:00Z', updatedAt: '2026-07-18T10:00:00Z' },
+    ])
+    listMeasurementsByParameterMock.mockResolvedValue([])
+
+    renderPage()
+
+    await screen.findByRole('heading', { name: /aquarium measurements/i })
+
+    expect(await screen.findByLabelText('Temperature (celsius)')).toBeInTheDocument()
+    for (const parameter of PARAMETER_CATALOG) {
+      expect(screen.queryByLabelText(`${parameter.displayName} (${parameter.unit})`)).not.toBeInTheDocument()
+    }
   })
 
   it('submits salinity and phosphate with shared measured-at context and refreshes history', async () => {
@@ -212,18 +187,32 @@ describe('MeasurementsPage', () => {
     await user.click(screen.getByRole('button', { name: /^add$/i }))
 
     await waitFor(() => {
-      expect(createSalinityMeasurementMock).toHaveBeenCalledTimes(1)
-      expect(createPhosphateMeasurementMock).toHaveBeenCalledTimes(1)
+      expect(createMeasurementByParameterMock).toHaveBeenCalledWith(
+        'aq-1',
+        'salinity',
+        expect.objectContaining({ value: 35.5 }),
+      )
+      expect(createMeasurementByParameterMock).toHaveBeenCalledWith(
+        'aq-1',
+        'phosphate',
+        expect.objectContaining({ value: 0.075 }),
+      )
     })
 
-    const salinityCall = createSalinityMeasurementMock.mock.calls[0]
-    const phosphateCall = createPhosphateMeasurementMock.mock.calls[0]
+    const calls = createMeasurementByParameterMock.mock.calls
+    const salinityCall = calls.find(([, parameter]) => parameter === 'salinity')
+    const phosphateCall = calls.find(([, parameter]) => parameter === 'phosphate')
 
-    expect(salinityCall?.[0]).toBe('aq-1')
-    expect(phosphateCall?.[0]).toBe('aq-1')
-    expect(salinityCall?.[1].measuredAt).toBe(phosphateCall?.[1].measuredAt)
-    expect(listSalinityMeasurementsMock).toHaveBeenCalledTimes(2)
-    expect(listPhosphateMeasurementsMock).toHaveBeenCalledTimes(2)
+    expect(salinityCall?.[2].measuredAt).toBe(phosphateCall?.[2].measuredAt)
+
+    const salinityListCalls = listMeasurementsByParameterMock.mock.calls.filter(
+      ([, parameter]) => parameter === 'salinity',
+    )
+    const phosphateListCalls = listMeasurementsByParameterMock.mock.calls.filter(
+      ([, parameter]) => parameter === 'phosphate',
+    )
+    expect(salinityListCalls).toHaveLength(2)
+    expect(phosphateListCalls).toHaveLength(2)
   })
 
   it('submits a new parameter reading (calcium) alongside an existing one (ammonia)', async () => {
@@ -237,12 +226,14 @@ describe('MeasurementsPage', () => {
     await user.click(screen.getByRole('button', { name: /^add$/i }))
 
     await waitFor(() => {
-      expect(createCalciumMeasurementMock).toHaveBeenCalledWith(
+      expect(createMeasurementByParameterMock).toHaveBeenCalledWith(
         'aq-1',
+        'calcium',
         expect.objectContaining({ value: 420 }),
       )
-      expect(createAmmoniaMeasurementMock).toHaveBeenCalledWith(
+      expect(createMeasurementByParameterMock).toHaveBeenCalledWith(
         'aq-1',
+        'ammonia',
         expect.objectContaining({ value: 0.25 }),
       )
     })
@@ -255,10 +246,10 @@ describe('MeasurementsPage', () => {
     await screen.findByRole('heading', { name: /aquarium measurements/i })
     await user.click(screen.getByRole('button', { name: /^add$/i }))
 
-    expect(await screen.findAllByText(/enter at least one measurement value to submit/i)).toHaveLength(9)
-    expect(createSalinityMeasurementMock).not.toHaveBeenCalled()
-    expect(createPhosphateMeasurementMock).not.toHaveBeenCalled()
-    expect(createCalciumMeasurementMock).not.toHaveBeenCalled()
+    expect(await screen.findAllByText(/enter at least one measurement value to submit/i)).toHaveLength(
+      PARAMETER_CATALOG.length,
+    )
+    expect(createMeasurementByParameterMock).not.toHaveBeenCalled()
   })
 
   it('renders salinity and phosphate trend cards and parameter-specific history tables', async () => {
@@ -270,10 +261,10 @@ describe('MeasurementsPage', () => {
     const salinityCard = screen.getByTestId('salinity-history-table')
     const phosphateCard = screen.getByTestId('phosphate-history-table')
 
-    expect(salinityCard).toHaveTextContent('35.00 ppt')
-    expect(salinityCard).toHaveTextContent('34.00 ppt')
-    expect(phosphateCard).toHaveTextContent('0.120 ppm')
-    expect(phosphateCard).toHaveTextContent('0.070 ppm')
+    expect(salinityCard).toHaveTextContent('35 ppt')
+    expect(salinityCard).toHaveTextContent('34 ppt')
+    expect(phosphateCard).toHaveTextContent('0.12 ppm')
+    expect(phosphateCard).toHaveTextContent('0.07 ppm')
   })
 
   it('hides the history card for a parameter with no readings yet by default, and shows it when "show empty" is checked', async () => {
@@ -310,8 +301,14 @@ describe('MeasurementsPage', () => {
       expect(deleteMeasurementMock).toHaveBeenCalledWith('aq-1', 'salinity', 's-2')
     })
 
-    expect(listSalinityMeasurementsMock).toHaveBeenCalledTimes(2)
-    expect(listPhosphateMeasurementsMock).toHaveBeenCalledTimes(2)
+    const salinityListCalls = listMeasurementsByParameterMock.mock.calls.filter(
+      ([, parameter]) => parameter === 'salinity',
+    )
+    const phosphateListCalls = listMeasurementsByParameterMock.mock.calls.filter(
+      ([, parameter]) => parameter === 'phosphate',
+    )
+    expect(salinityListCalls).toHaveLength(2)
+    expect(phosphateListCalls).toHaveLength(2)
   })
 
   it('cancels a pending delete without calling the API', async () => {
@@ -348,18 +345,37 @@ describe('MeasurementsPage', () => {
     expect(screen.queryByRole('heading', { name: /delete measurement\?/i })).not.toBeInTheDocument()
   })
 
-  it('shows recoverable history error and retries', async () => {
+  it('shows recoverable history error only when every parameter fails, and retries', async () => {
     const user = userEvent.setup()
-    listSalinityMeasurementsMock
-      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce([measurementFixture('s-2', 'salinity', 35, '2026-07-19T10:00:00Z')])
+    let callCount = 0
+    listMeasurementsByParameterMock.mockImplementation(async (_aquariumId, parameter) => {
+      callCount += 1
+      if (callCount <= PARAMETER_CATALOG.length) {
+        throw new TypeError('Failed to fetch')
+      }
+      return defaultMeasurementsFor(parameter)
+    })
 
     renderPage()
 
     await screen.findByText(/could not load measurement history/i)
     await user.click(screen.getByRole('button', { name: /^retry$/i }))
 
-    expect(await screen.findByText('35.00 ppt')).toBeInTheDocument()
+    expect(await screen.findByText('35 ppt')).toBeInTheDocument()
+  })
+
+  it('keeps the history view usable when only some parameters fail to load', async () => {
+    listMeasurementsByParameterMock.mockImplementation(async (_aquariumId, parameter) => {
+      if (parameter === 'calcium') {
+        throw new TypeError('Failed to fetch')
+      }
+      return defaultMeasurementsFor(parameter)
+    })
+
+    renderPage()
+
+    expect(await screen.findByText('35 ppt')).toBeInTheDocument()
+    expect(screen.queryByText(/could not load measurement history/i)).not.toBeInTheDocument()
   })
 
   it('shows delete failure message with retry action', async () => {
@@ -413,9 +429,12 @@ describe('MeasurementsPage', () => {
 
   it('hides phosphate chart fallback by default when phosphate data is sparse, and shows it when "show empty" is checked', async () => {
     const user = userEvent.setup()
-    listPhosphateMeasurementsMock.mockResolvedValueOnce([
-      measurementFixture('p-1', 'phosphate', 0.08, '2026-07-18T10:00:00Z'),
-    ])
+    listMeasurementsByParameterMock.mockImplementation(async (_aquariumId, parameter) => {
+      if (parameter === 'phosphate') {
+        return [measurementFixture('p-1', 'phosphate', 0.08, '2026-07-18T10:00:00Z')]
+      }
+      return defaultMeasurementsFor(parameter)
+    })
 
     renderPage()
 
@@ -425,6 +444,6 @@ describe('MeasurementsPage', () => {
     await user.click(screen.getByRole('checkbox', { name: /show empty tables and charts/i }))
 
     expect(await screen.findByText(/phosphate trend unavailable/i)).toBeInTheDocument()
-    expect(screen.getByText('0.080 ppm')).toBeInTheDocument()
+    expect(screen.getByText('0.08 ppm')).toBeInTheDocument()
   })
 })
