@@ -9,7 +9,7 @@ interface OidcProviderProps {
 }
 
 export function OidcProvider({ children }: OidcProviderProps) {
-  if (!hasOidcConfig()) {
+  if (config.authMode === 'none' || !hasOidcConfig()) {
     return <>{children}</>
   }
 

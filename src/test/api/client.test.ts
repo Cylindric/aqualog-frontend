@@ -9,6 +9,7 @@ import {
 vi.mock('../../config', () => ({
   config: {
     apiBaseUrl: 'http://localhost:8000',
+    authMode: 'oauth',
     oidcAuthority: 'https://auth.example.com/application/o/aqualog/',
     oidcClientId: 'frontend-test-replace-with-aqualog-spa-client-id',
     oidcRedirectUri: 'http://localhost:5173/auth/callback',
@@ -178,5 +179,51 @@ describe('apiGet', () => {
       json: async () => ({}),
     }))
     await expect(apiGet('/api/v1/test')).rejects.toMatchObject({ status: 503 })
+  })
+})
+
+// ─── apiGet (auth mode: none) ──────────────────────────────────────────────────
+
+describe('apiGet with auth mode none', () => {
+  afterEach(async () => {
+    const { config } = await import('../../config')
+    config.authMode = 'oauth'
+    setAccessTokenProvider(() => null)
+    setRefreshAccessTokenProvider(() => null)
+    vi.restoreAllMocks()
+  })
+
+  it('sends requests without an Authorization header or a registered token provider', async () => {
+    const { config } = await import('../../config')
+    config.authMode = 'none'
+    const { apiGet } = await import('../../api/client')
+
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(apiGet('/api/v1/test')).resolves.toEqual({ ok: true })
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect((options.headers as Record<string, string>)['Authorization']).toBeUndefined()
+  })
+
+  it('does not attempt a silent refresh when the backend returns 401', async () => {
+    const { config } = await import('../../config')
+    config.authMode = 'none'
+    const { apiGet } = await import('../../api/client')
+
+    const refreshMock = vi.fn()
+    setRefreshAccessTokenProvider(refreshMock)
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      json: async () => ({}),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(apiGet('/api/v1/test')).rejects.toMatchObject({ status: 401 })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(refreshMock).not.toHaveBeenCalled()
   })
 })

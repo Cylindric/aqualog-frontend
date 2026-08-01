@@ -8,6 +8,7 @@ import { config } from '../../config'
 
 const readinessMock = vi.fn()
 const authMock = vi.fn()
+const profileMock = vi.fn()
 
 vi.mock('../../hooks/useReadinessCheck', () => ({
   useReadinessCheck: () => readinessMock(),
@@ -15,6 +16,10 @@ vi.mock('../../hooks/useReadinessCheck', () => ({
 
 vi.mock('react-oidc-context', () => ({
   useAuth: () => authMock(),
+}))
+
+vi.mock('../../features/profile/useProfile', () => ({
+  useProfile: () => profileMock(),
 }))
 
 function Wrapper({ children, initialPath = '/dashboard' }: { children: ReactNode; initialPath?: string }) {
@@ -38,6 +43,7 @@ function renderShell(initialPath = '/dashboard') {
 
 beforeEach(() => {
   config.appVersionDisplay = 'v1.6.0'
+  config.authMode = 'oauth'
 
   readinessMock.mockReturnValue({
     state: 'ready',
@@ -48,6 +54,21 @@ beforeEach(() => {
   authMock.mockReturnValue({
     isAuthenticated: true,
     signoutRedirect: vi.fn(),
+  })
+
+  profileMock.mockReturnValue({
+    profile: {
+      id: 'user-1',
+      username: null,
+      display_name: null,
+      bio: null,
+      created_at: '',
+      updated_at: '',
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    save: vi.fn(),
   })
 })
 
@@ -119,20 +140,86 @@ describe('Shell navigation layout', () => {
     expect(within(compactNav).getByRole('link', { name: /profile/i })).toBeInTheDocument()
   })
 
-  it('shows the logged-in username in the authenticated badge', () => {
-    authMock.mockReturnValue({
-      isAuthenticated: true,
-      signoutRedirect: vi.fn(),
-      user: { profile: { preferred_username: 'fishkeeper42' } },
+  it('shows the app-sourced username in the authenticated badge', () => {
+    profileMock.mockReturnValue({
+      profile: {
+        id: 'user-1',
+        username: 'fishkeeper42',
+        display_name: null,
+        bio: null,
+        created_at: '',
+        updated_at: '',
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      save: vi.fn(),
     })
     renderShell('/dashboard')
 
     expect(screen.getByText('Authenticated as fishkeeper42')).toBeInTheDocument()
   })
 
-  it('falls back to plain Authenticated badge when no username claim is present', () => {
+  it('prefers display name over username in the authenticated badge', () => {
+    profileMock.mockReturnValue({
+      profile: {
+        id: 'user-1',
+        username: 'fishkeeper42',
+        display_name: 'Fish Keeper',
+        bio: null,
+        created_at: '',
+        updated_at: '',
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      save: vi.fn(),
+    })
+    renderShell('/dashboard')
+
+    expect(screen.getByText('Authenticated as Fish Keeper')).toBeInTheDocument()
+  })
+
+  it('falls back to plain Authenticated badge when no username or display name is present', () => {
     renderShell('/dashboard')
 
     expect(screen.getByText('Authenticated')).toBeInTheDocument()
+  })
+
+  it('hides the identity badge while the profile has not loaded', () => {
+    profileMock.mockReturnValue({
+      profile: null,
+      isLoading: true,
+      error: null,
+      refetch: vi.fn(),
+      save: vi.fn(),
+    })
+    renderShell('/dashboard')
+
+    expect(screen.queryByText(/authenticated/i)).not.toBeInTheDocument()
+  })
+
+  it('shows the identity badge but hides sign-out when auth mode is none', () => {
+    config.authMode = 'none'
+    authMock.mockClear()
+    profileMock.mockReturnValue({
+      profile: {
+        id: 'user-1',
+        username: 'fishkeeper42',
+        display_name: null,
+        bio: null,
+        created_at: '',
+        updated_at: '',
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      save: vi.fn(),
+    })
+    renderShell('/dashboard')
+
+    expect(screen.getByText('Authenticated as fishkeeper42')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument()
+    expect(authMock).not.toHaveBeenCalled()
   })
 })

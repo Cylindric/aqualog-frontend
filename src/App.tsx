@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { Shell } from './components/Shell'
 import { ConfigErrorPage } from './pages/ConfigErrorPage'
-import { isConfigured } from './config'
+import { config, isConfigured } from './config'
 import { AuthTokenBridge } from './auth/OidcProvider'
 import { toAuthFailureGuidance } from './auth/authErrorMessaging'
 
@@ -51,14 +51,41 @@ export default function App() {
       <Suspense fallback={<AuthStatus title="Loading" body="Loading application..." />}>
         <Routes>
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
-          <Route path="*" element={<AuthenticatedApp />} />
+          <Route path="*" element={<AuthGate />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
   )
 }
 
-function AuthenticatedApp() {
+function AuthGate() {
+  return config.authMode === 'none' ? <OpenAuthenticatedApp /> : <OidcAuthenticatedApp />
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<DashboardPage />} />
+      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/calculator" element={<CalculatorPage />} />
+      <Route path="/aquariums" element={<AquariumsPage />} />
+      <Route path="/aquariums/:id" element={<AquariumDetailPage />} />
+      <Route path="/measurements" element={<MeasurementsPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  )
+}
+
+function OpenAuthenticatedApp() {
+  return (
+    <Shell>
+      <AppRoutes />
+    </Shell>
+  )
+}
+
+function OidcAuthenticatedApp() {
   const auth = useAuth()
 
   useEffect(() => {
@@ -98,16 +125,7 @@ function AuthenticatedApp() {
     <>
       <AuthTokenBridge />
       <Shell>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/calculator" element={<CalculatorPage />} />
-          <Route path="/aquariums" element={<AquariumsPage />} />
-          <Route path="/aquariums/:id" element={<AquariumDetailPage />} />
-          <Route path="/measurements" element={<MeasurementsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+        <AppRoutes />
       </Shell>
     </>
   )

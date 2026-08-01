@@ -17,6 +17,7 @@ import { NavLink } from 'react-router'
 import { useReadinessCheck } from '../hooks/useReadinessCheck'
 import { useAuth } from 'react-oidc-context'
 import { config } from '../config'
+import { useProfile } from '../features/profile/useProfile'
 import { PRIMARY_NAV_ITEMS } from './primaryNav'
 
 interface ShellProps {
@@ -25,8 +26,6 @@ interface ShellProps {
 
 export function Shell({ children }: ShellProps) {
   const { state, errorMessage, retry } = useReadinessCheck()
-  const auth = useAuth()
-  const username = auth.user?.profile.preferred_username ?? auth.user?.profile.name
 
   return (
     <Flex direction="column" h="100dvh" style={{ overflow: 'hidden' }}>
@@ -50,16 +49,7 @@ export function Shell({ children }: ShellProps) {
             Aquarium Logging and Tracking
           </Text>
         </Group>
-        {auth.isAuthenticated && (
-          <Group gap="xs">
-            <Badge color="green" variant="light" radius="xl" px="xs" py="2px">
-              {username ? `Authenticated as ${username}` : 'Authenticated'}
-            </Badge>
-            <Button size="xs" variant="subtle" onClick={() => void auth.signoutRedirect()}>
-              Sign out
-            </Button>
-          </Group>
-        )}
+        <AuthStatusBadge />
       </Flex>
 
       {/* Compact mobile navigation */}
@@ -97,6 +87,35 @@ export function Shell({ children }: ShellProps) {
         </Text>
       </Box>
     </Flex>
+  )
+}
+
+function AuthStatusBadge() {
+  const { profile } = useProfile()
+
+  if (!profile) {
+    return null
+  }
+
+  const identity = profile.display_name ?? profile.username ?? undefined
+
+  return (
+    <Group gap="xs">
+      <Badge color="green" variant="light" radius="xl" px="xs" py="2px">
+        {identity ? `Hi, ${identity}` : 'Authenticated'}
+      </Badge>
+      {config.authMode === 'oauth' && <SignOutButton />}
+    </Group>
+  )
+}
+
+function SignOutButton() {
+  const auth = useAuth()
+
+  return (
+    <Button size="xs" variant="subtle" onClick={() => void auth.signoutRedirect()}>
+      Sign out
+    </Button>
   )
 }
 

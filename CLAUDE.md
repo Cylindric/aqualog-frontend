@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the `frontend/` submodule of the AquaLog project (own git remote: `git@github.com:Cylindric/aqualog-frontend.git`). It is checked out inside a parent orchestration repo but commits/branches/pushes must be made from within this directory, independently of the parent.
 
+## Working practices
+
+Using an isolated git worktree for a task is fine. However, do **not** push worktree branches to `origin` or open pull requests (draft or otherwise) as part of finishing a task — commit locally and leave the branch/worktree in place for the user to review, push, and open a PR themselves. Only push or open a PR if the user explicitly asks for it in that conversation.
+
 ## Commands
 
 ```bash

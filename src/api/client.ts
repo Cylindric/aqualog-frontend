@@ -74,11 +74,11 @@ export async function apiRequest<T>(
     ? AbortSignal.any([options.signal, timeoutSignal])
     : timeoutSignal
 
-  const runRequest = (token: string) =>
+  const runRequest = (token: string | null) =>
     fetch(url.toString(), {
       method,
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         Accept: 'application/json',
         ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
@@ -86,27 +86,33 @@ export async function apiRequest<T>(
       signal: combinedSignal,
     })
 
-  let accessToken: string
-  try {
-    accessToken = await getAccessToken()
-  } catch (error) {
-    if (!(error instanceof ApiRequestError) || error.status !== 401) {
-      throw error
+  let response: Response
+
+  if (config.authMode === 'none') {
+    response = await runRequest(null)
+  } else {
+    let accessToken: string
+    try {
+      accessToken = await getAccessToken()
+    } catch (error) {
+      if (!(error instanceof ApiRequestError) || error.status !== 401) {
+        throw error
+      }
+
+      const refreshedToken = await refreshAccessTokenProvider()
+      if (!refreshedToken) {
+        throw error
+      }
+      accessToken = refreshedToken
     }
 
-    const refreshedToken = await refreshAccessTokenProvider()
-    if (!refreshedToken) {
-      throw error
-    }
-    accessToken = refreshedToken
-  }
+    response = await runRequest(accessToken)
 
-  let response = await runRequest(accessToken)
-
-  if (response.status === 401) {
-    const refreshedToken = await refreshAccessTokenProvider()
-    if (refreshedToken) {
-      response = await runRequest(refreshedToken)
+    if (response.status === 401) {
+      const refreshedToken = await refreshAccessTokenProvider()
+      if (refreshedToken) {
+        response = await runRequest(refreshedToken)
+      }
     }
   }
 
