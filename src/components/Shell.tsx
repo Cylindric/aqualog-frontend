@@ -26,6 +26,7 @@ interface ShellProps {
 export function Shell({ children }: ShellProps) {
   const { state, errorMessage, retry } = useReadinessCheck()
   const auth = useAuth()
+  const username = auth.user?.profile.preferred_username ?? auth.user?.profile.name
 
   return (
     <Flex direction="column" h="100dvh" style={{ overflow: 'hidden' }}>
@@ -52,7 +53,7 @@ export function Shell({ children }: ShellProps) {
         {auth.isAuthenticated && (
           <Group gap="xs">
             <Badge color="green" variant="light" radius="xl" px="xs" py="2px">
-              Authenticated
+              {username ? `Authenticated as ${username}` : 'Authenticated'}
             </Badge>
             <Button size="xs" variant="subtle" onClick={() => void auth.signoutRedirect()}>
               Sign out
