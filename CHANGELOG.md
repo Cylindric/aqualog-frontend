@@ -1,3 +1,14 @@
+## v1.16.0 (2026-08-01)
+
+### Feat
+
+- add configurable AQUALOG_AUTH_MODE (oauth|none)
+
+### Fix
+
+- change fake-auth display
+- source Shell identity badge from GET /api/v1/me, not OIDC claims
+
 ## v1.15.0 (2026-08-01)
 
 ### Feat
