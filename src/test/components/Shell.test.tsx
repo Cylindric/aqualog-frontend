@@ -118,4 +118,21 @@ describe('Shell navigation layout', () => {
     expect(within(desktopNav).getAllByRole('link', { name: /profile/i }).length).toBeGreaterThan(0)
     expect(within(compactNav).getByRole('link', { name: /profile/i })).toBeInTheDocument()
   })
+
+  it('shows the logged-in username in the authenticated badge', () => {
+    authMock.mockReturnValue({
+      isAuthenticated: true,
+      signoutRedirect: vi.fn(),
+      user: { profile: { preferred_username: 'fishkeeper42' } },
+    })
+    renderShell('/dashboard')
+
+    expect(screen.getByText('Authenticated as fishkeeper42')).toBeInTheDocument()
+  })
+
+  it('falls back to plain Authenticated badge when no username claim is present', () => {
+    renderShell('/dashboard')
+
+    expect(screen.getByText('Authenticated')).toBeInTheDocument()
+  })
 })
