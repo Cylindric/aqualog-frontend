@@ -43,10 +43,10 @@ export function Shell({ children }: ShellProps) {
       >
         <Group gap="sm" wrap="nowrap">
           <Text fw={700} size="lg">
-            🐠 Aqualog
+            🐠 MyAquariumLog
           </Text>
           <Text c="dimmed" size="sm" visibleFrom="sm">
-            Aquarium Portal
+            Aquarium Logging and Tracking
           </Text>
         </Group>
         {auth.isAuthenticated && (
