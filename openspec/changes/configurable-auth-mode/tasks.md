@@ -13,7 +13,8 @@
 
 ## 3. Shell UI
 
-- [x] 3.1 In `src/components/Shell.tsx`, guard the sign-out button and username display so they only render (and only call `useAuth()`) when `config.authMode === 'oauth'`.
+- [x] 3.1 In `src/components/Shell.tsx`, source the identity badge from the app's `GET /api/v1/me` endpoint via the existing `useProfile()` hook (not `auth.user?.profile`), so it renders identically in both auth modes; render it whenever `profile` has loaded, regardless of `config.authMode` (per design.md decision 8).
+- [x] 3.2 Isolate the "Sign out" button in its own subcomponent that calls `useAuth()`, rendered only when `config.authMode === 'oauth'`, so `useAuth()` is never called when no `AuthProvider` is mounted (per design.md decision 9).
 
 ## 4. API client
 
@@ -23,7 +24,7 @@
 
 - [x] 5.1 Add/update `src/test/config.test.ts` (or equivalent) covering: default `authMode` is `oauth`; `none` mode makes `isConfigured()` true without OIDC keys; unrecognized values fall back to `oauth`.
 - [x] 5.2 Add tests for `App.tsx` rendering routes directly (no sign-in redirect, no `AuthStatus` screens) when `authMode` is `none`.
-- [x] 5.3 Add tests for `Shell.tsx` hiding sign-out/username when `authMode` is `none`.
+- [x] 5.3 Add tests for `Shell.tsx`: identity badge renders (from `useProfile()`) in both `oauth` and `none` modes; "Sign out" only renders in `oauth` mode; badge is hidden while the profile hasn't loaded.
 - [x] 5.4 Add tests for `AuthCallbackPage` redirecting to `/` when `authMode` is `none`.
 - [x] 5.5 Add tests for `api/client.ts` sending requests without an `Authorization` header and without throwing when no access-token provider is registered, when `authMode` is `none`.
 - [x] 5.6 Confirm existing `oauth`-mode tests still pass unchanged (regression check for the default path).

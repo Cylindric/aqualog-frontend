@@ -15,7 +15,6 @@ This is a frontend-only change. The backend's own `none`-mode behavior (skipping
 **Non-Goals:**
 - Backend enforcement/bypass of auth — handled independently in `aqualog-backend`.
 - Supporting additional auth modes beyond `oauth`/`none` (e.g. API keys, basic auth) — not requested.
-- Persisting or mocking a "fake user" identity in `none` mode — the UI simply hides identity-dependent elements (username, sign-out).
 - Changing the OIDC flow itself when `oauth` mode is active.
 
 ## Decisions
@@ -41,14 +40,18 @@ Calling `useAuth()` when no `AuthProvider` is mounted throws (react-oidc-context
 **7. `/auth/callback` route: redirect to `/` in `none` mode rather than deleting the route.**
 Keeps `App.tsx`'s route table static/simple. If a stale bookmark or redirect URI hits `/auth/callback` while `none` mode is active, `AuthCallbackPage` immediately navigates to `/` instead of calling `useAuth()` (which would throw without a provider).
 
-**8. Shell sign-out/identity UI reads `config.authMode` directly, not `auth.isAuthenticated`.**
-`Shell.tsx` already imports `useAuth()`; wrapping that whole block in an `authMode === 'oauth'` check (instead of trying to make `useAuth()` safe to call unconditionally) is the simplest correct fix, consistent with decision 5.
+**8. Shell's identity badge sources the username from the app's own `GET /api/v1/me` endpoint (via the existing `useProfile()` hook), not from the OIDC ID token.**
+The backend resolves a real `User` row regardless of auth mode (bearer-token-derived in `oauth` mode, a default/local user in `none` mode per the independent backend change) — `GET /api/v1/me` always returns a user, so it's a strictly better identity source than `auth.user?.profile`: it works uniformly in both modes, and even in `oauth` mode is unaffected by which OIDC claims happen to be populated. `AuthStatusBadge` calls `useProfile()` unconditionally and renders whenever `profile` is loaded (`display_name` preferred, falling back to `username`, then a generic "Authenticated" label) — this is authMode-agnostic and requires no `useAuth()` call. Alternative considered: keep sourcing from `auth.user?.profile` and fake a static identity in `none` mode — rejected because it invents a value with no backing data and still special-cases two code paths instead of one.
+
+**9. The "Sign out" control remains gated on `config.authMode === 'oauth'`, isolated in its own `SignOutButton` subcomponent that calls `useAuth()`.**
+Signing out is only meaningful when there is an actual OIDC session to end. Isolating the `useAuth()` call inside `SignOutButton` (rendered only when `authMode === 'oauth'`) keeps `AuthStatusBadge` itself safe to render unconditionally without ever calling `useAuth()` when no `AuthProvider` is mounted, consistent with decision 5's constraint.
 
 ## Risks / Trade-offs
 
 - **[Risk]** Divergent code paths (`OidcAuthenticatedApp` vs `OpenAuthenticatedApp`) could drift over time. → **Mitigation**: keep the `none`-mode path minimal (just `Shell` + `Routes`, no new logic), and cover both with Vitest so drift is caught by tests, not manual QA.
 - **[Risk]** A misconfigured production deployment could accidentally ship with `AQUALOG_AUTH_MODE=none`, disabling the frontend's auth gate. → **Mitigation**: this is a deliberate, explicit opt-in string value (not a boolean flag that could be misread), and backend auth enforcement is the actual security boundary (tracked independently) — the frontend gate is UX, not a security control.
-- **[Risk]** Components that call `useAuth()` outside the two gated entry points (`Shell.tsx`, `AuthCallbackPage.tsx`) would throw in `none` mode. → **Mitigation**: grep confirms `useAuth` is only used in `App.tsx`, `Shell.tsx`, `OidcProvider.tsx`, and `AuthCallbackPage.tsx` today; tasks.md includes updating all four.
+- **[Risk]** Components that call `useAuth()` outside a gated entry point would throw in `none` mode. → **Mitigation**: grep confirms `useAuth` is only used in `App.tsx`, `OidcProvider.tsx`, `AuthCallbackPage.tsx`, and `Shell.tsx`'s `SignOutButton` (rendered only when `authMode === 'oauth'`) today; tasks.md includes updating all of these.
+- **[Risk]** Sourcing identity from `GET /api/v1/me` adds a network dependency to the header badge that didn't exist before (previously read straight off the already-fetched ID token). → **Mitigation**: `useProfile()` already exists and is used by `ProfilePage`; a failed/loading fetch just hides the badge (`AuthStatusBadge` returns `null`) rather than erroring, so it degrades gracefully.
 
 ## Migration Plan
 

@@ -15,12 +15,31 @@ The system SHALL support a runtime-configured authentication mode, `AQUALOG_AUTH
 - **WHEN** the portal starts with `AQUALOG_AUTH_MODE=none`
 - **THEN** the system does not initiate an OIDC sign-in redirect, does not require an authenticated session, and renders the application routes directly
 
-### Requirement: No authenticated-session UI when auth is disabled
-When `AQUALOG_AUTH_MODE=none`, the system SHALL NOT display sign-in/sign-out controls or authenticated-user identity that depend on an OIDC session.
+### Requirement: Application-sourced identity display, independent of auth mode
+The system SHALL display the current user's identity in the application shell by reading it from the application's own current-user endpoint (`GET /api/v1/me`), not from OIDC token claims, so identity display works identically regardless of `AQUALOG_AUTH_MODE`.
 
-#### Scenario: Shell navigation with auth disabled
+#### Scenario: Identity badge shown in oauth mode
+- **WHEN** `AQUALOG_AUTH_MODE=oauth` and the application shell renders for an authenticated user
+- **THEN** the system shows the signed-in identity using the display name (or username) returned by the application's current-user endpoint, not raw OIDC profile claims
+
+#### Scenario: Identity badge shown in none mode
 - **WHEN** `AQUALOG_AUTH_MODE=none` and the application shell renders
-- **THEN** the system does not show a "Sign out" control or a signed-in username, since no authenticated session exists
+- **THEN** the system shows the signed-in identity using the display name (or username) returned by the application's current-user endpoint, exactly as it does in oauth mode
+
+#### Scenario: Identity not yet available
+- **WHEN** the application's current-user endpoint has not yet returned a result (still loading, or failed)
+- **THEN** the system omits the identity badge rather than showing stale or placeholder identity text
+
+### Requirement: Sign-out control limited to oauth mode
+The system SHALL only display a "Sign out" control when `AQUALOG_AUTH_MODE=oauth`, since there is no OIDC session to terminate when auth is disabled.
+
+#### Scenario: Sign-out shown in oauth mode
+- **WHEN** `AQUALOG_AUTH_MODE=oauth` and the application shell renders for an authenticated user
+- **THEN** the system shows a "Sign out" control that ends the OIDC session
+
+#### Scenario: Sign-out hidden when auth is disabled
+- **WHEN** `AQUALOG_AUTH_MODE=none` and the application shell renders
+- **THEN** the system does not show a "Sign out" control
 
 #### Scenario: Callback route reached with auth disabled
 - **WHEN** `AQUALOG_AUTH_MODE=none` and a user navigates to `/auth/callback`
