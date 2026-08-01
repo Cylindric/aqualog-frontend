@@ -79,10 +79,13 @@ tasks:
 
   frontend:
     desc: Start the frontend server locally
+    env:
+      AQUALOG_OIDC_REDIRECT_URI: 'http://localhost:9002/auth/callback'
+      AQUALOG_OIDC_POST_LOGOUT_REDIRECT_URI: 'http://localhost:9002'
     cmds:
-      - cmd: env | grep AQUALOG_
       - cmd: npm ci
       - cmd: npm run dev
+
 
   test:
     desc: Run the test suite with coverage summary and HTML test report

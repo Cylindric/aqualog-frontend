@@ -20,127 +20,33 @@ import {
 import { LineChart } from '@mantine/charts'
 import { type AquariumRecord, listAquariums } from '../api/aquariums'
 import {
-  createAlkalinityMeasurement,
-  createAmmoniaMeasurement,
-  createCalciumMeasurement,
-  createMagnesiumMeasurement,
-  createNitrateMeasurement,
-  createNitriteMeasurement,
-  createPhMeasurement,
-  createPhosphateMeasurement,
-  createSalinityMeasurement,
+  createMeasurementByParameter,
   deleteMeasurement,
-  listAlkalinityMeasurements,
-  listAmmoniaMeasurements,
-  listCalciumMeasurements,
-  listMagnesiumMeasurements,
-  listNitrateMeasurements,
-  listNitriteMeasurements,
-  listPhMeasurements,
-  listPhosphateMeasurements,
-  listSalinityMeasurements,
-  type CreateMeasurementInput,
+  listMeasurementsByParameter,
   type MeasurementParameter,
   type MeasurementRecord,
 } from '../api/measurements'
-import { getThreshold, type ThresholdRecord } from '../api/thresholds'
+import { listParameters, type ParameterRecord } from '../api/parameters'
+import { getThreshold, type ThresholdParameter, type ThresholdRecord } from '../api/thresholds'
 import { ApiRequestError, toUserMessage } from '../api/client'
 
 type MeasurementsViewState = 'idle' | 'loading' | 'ready' | 'error'
 
 interface ParameterConfig {
-  key: MeasurementParameter
-  label: string
+  slug: MeasurementParameter
+  displayName: string
   unit: string
-  decimalScale: number
-  placeholder: string
-  list: (aquariumId: string, signal?: AbortSignal) => Promise<MeasurementRecord[]>
-  create: (aquariumId: string, input: CreateMeasurementInput, signal?: AbortSignal) => Promise<MeasurementRecord>
 }
 
-const PARAMETERS: ParameterConfig[] = [
-  {
-    key: 'salinity',
-    label: 'Salinity',
-    unit: 'ppt',
-    decimalScale: 2,
-    placeholder: 'e.g. 35',
-    list: listSalinityMeasurements,
-    create: createSalinityMeasurement,
-  },
-  {
-    key: 'phosphate',
-    label: 'Phosphate',
-    unit: 'ppm',
-    decimalScale: 3,
-    placeholder: 'e.g. 0.075',
-    list: listPhosphateMeasurements,
-    create: createPhosphateMeasurement,
-  },
-  {
-    key: 'calcium',
-    label: 'Calcium',
-    unit: 'ppm',
-    decimalScale: 1,
-    placeholder: 'e.g. 420',
-    list: listCalciumMeasurements,
-    create: createCalciumMeasurement,
-  },
-  {
-    key: 'magnesium',
-    label: 'Magnesium',
-    unit: 'ppm',
-    decimalScale: 1,
-    placeholder: 'e.g. 1350',
-    list: listMagnesiumMeasurements,
-    create: createMagnesiumMeasurement,
-  },
-  {
-    key: 'alkalinity',
-    label: 'Alkalinity',
-    unit: 'dKH',
-    decimalScale: 2,
-    placeholder: 'e.g. 8.5',
-    list: listAlkalinityMeasurements,
-    create: createAlkalinityMeasurement,
-  },
-  {
-    key: 'ph',
-    label: 'pH',
-    unit: 'pH',
-    decimalScale: 2,
-    placeholder: 'e.g. 8.2',
-    list: listPhMeasurements,
-    create: createPhMeasurement,
-  },
-  {
-    key: 'ammonia',
-    label: 'Ammonia',
-    unit: 'mg/L',
-    decimalScale: 2,
-    placeholder: 'e.g. 0.25',
-    list: listAmmoniaMeasurements,
-    create: createAmmoniaMeasurement,
-  },
-  {
-    key: 'nitrite',
-    label: 'Nitrite',
-    unit: 'ppm',
-    decimalScale: 2,
-    placeholder: 'e.g. 0.5',
-    list: listNitriteMeasurements,
-    create: createNitriteMeasurement,
-  },
-  {
-    key: 'nitrate',
-    label: 'Nitrate',
-    unit: 'ppm',
-    decimalScale: 1,
-    placeholder: 'e.g. 10',
-    list: listNitrateMeasurements,
-    create: createNitrateMeasurement,
-  },
-]
+function toParameterConfigs(parameters: ParameterRecord[]): ParameterConfig[] {
+  return parameters
+    .filter((parameter): parameter is ParameterRecord & { unit: string } => parameter.unit !== null)
+    .map((parameter) => ({
+      slug: parameter.slug,
+      displayName: parameter.displayName,
+      unit: parameter.unit,
+    }))
+}
 
 type ParameterValues = Record<MeasurementParameter, number | ''>
 
@@ -154,25 +60,25 @@ interface LastDeleteAttempt {
   parameter: MeasurementParameter
 }
 
-function emptyParameterValues(): ParameterValues {
-  const values = {} as ParameterValues
-  for (const parameter of PARAMETERS) {
-    values[parameter.key] = ''
+function emptyParameterValues(parameters: ParameterConfig[]): ParameterValues {
+  const values: ParameterValues = {}
+  for (const parameter of parameters) {
+    values[parameter.slug] = ''
   }
   return values
 }
 
-function defaultFormValues(): MeasurementFormValues {
+function defaultFormValues(parameters: ParameterConfig[]): MeasurementFormValues {
   return {
-    values: emptyParameterValues(),
+    values: emptyParameterValues(parameters),
     measuredAtLocal: new Date().toISOString().slice(0, 16),
   }
 }
 
-function emptyThresholds(): Record<MeasurementParameter, ThresholdRecord | null> {
-  const thresholds = {} as Record<MeasurementParameter, ThresholdRecord | null>
-  for (const parameter of PARAMETERS) {
-    thresholds[parameter.key] = null
+function emptyThresholds(parameters: ParameterConfig[]): Record<MeasurementParameter, ThresholdRecord | null> {
+  const thresholds: Record<MeasurementParameter, ThresholdRecord | null> = {}
+  for (const parameter of parameters) {
+    thresholds[parameter.slug] = null
   }
   return thresholds
 }
@@ -183,15 +89,17 @@ export function MeasurementsPage() {
   const [aquariumsLoading, setAquariumsLoading] = useState(true)
   const [aquariumsError, setAquariumsError] = useState('')
 
+  const [parameters, setParameters] = useState<ParameterConfig[]>([])
+  const [parametersLoading, setParametersLoading] = useState(true)
+  const [parametersError, setParametersError] = useState('')
+
   const [viewState, setViewState] = useState<MeasurementsViewState>('idle')
   const [measurements, setMeasurements] = useState<MeasurementRecord[]>([])
   const [historyError, setHistoryError] = useState('')
 
-  const [thresholds, setThresholds] = useState<Record<MeasurementParameter, ThresholdRecord | null>>(
-    emptyThresholds(),
-  )
+  const [thresholds, setThresholds] = useState<Record<MeasurementParameter, ThresholdRecord | null>>({})
 
-  const [formValues, setFormValues] = useState<MeasurementFormValues>(defaultFormValues())
+  const [formValues, setFormValues] = useState<MeasurementFormValues>(defaultFormValues([]))
   const [formErrors, setFormErrors] = useState<Partial<Record<MeasurementParameter | 'measuredAtLocal', string>>>({})
   const [saving, setSaving] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -207,6 +115,7 @@ export function MeasurementsPage() {
   useEffect(() => {
     const controller = new AbortController()
     void loadAquariums(controller.signal)
+    void loadParameters(controller.signal)
 
     return () => {
       controller.abort()
@@ -214,20 +123,20 @@ export function MeasurementsPage() {
   }, [])
 
   useEffect(() => {
-    if (!selectedAquariumId) {
+    if (!selectedAquariumId || parameters.length === 0) {
       setMeasurements([])
       setViewState('idle')
-      setThresholds(emptyThresholds())
+      setThresholds(emptyThresholds(parameters))
       return
     }
 
     const controller = new AbortController()
-    void loadMeasurements(selectedAquariumId, controller.signal)
-    void loadThresholds(selectedAquariumId, controller.signal)
+    void loadMeasurements(selectedAquariumId, parameters, controller.signal)
+    void loadThresholds(selectedAquariumId, parameters, controller.signal)
     return () => {
       controller.abort()
     }
-  }, [selectedAquariumId])
+  }, [selectedAquariumId, parameters])
 
   const sortedMeasurements = useMemo(
     () => [...measurements].sort((a, b) => Date.parse(b.measuredAt) - Date.parse(a.measuredAt)),
@@ -235,12 +144,12 @@ export function MeasurementsPage() {
   )
 
   const measurementsByParameter = useMemo(() => {
-    const grouped = {} as Record<MeasurementParameter, MeasurementRecord[]>
-    for (const parameter of PARAMETERS) {
-      grouped[parameter.key] = sortedMeasurements.filter((measurement) => measurement.parameter === parameter.key)
+    const grouped: Record<MeasurementParameter, MeasurementRecord[]> = {}
+    for (const parameter of parameters) {
+      grouped[parameter.slug] = sortedMeasurements.filter((measurement) => measurement.parameter === parameter.slug)
     }
     return grouped
-  }, [sortedMeasurements])
+  }, [sortedMeasurements, parameters])
 
   const aquariumOptions = useMemo(
     () => aquariums.map((aquarium) => ({ value: aquarium.id, label: aquarium.name })),
@@ -251,9 +160,13 @@ export function MeasurementsPage() {
     void loadAquariums()
   }
 
+  const handleRetryParameters = () => {
+    void loadParameters()
+  }
+
   const handleRetryHistory = () => {
     if (!selectedAquariumId) return
-    void loadMeasurements(selectedAquariumId)
+    void loadMeasurements(selectedAquariumId, parameters)
   }
 
   const handleRetryCreate = () => {
@@ -267,7 +180,7 @@ export function MeasurementsPage() {
   }
 
   const handleFormSubmit = async () => {
-    const validation = validateMeasurement(formValues)
+    const validation = validateMeasurement(formValues, parameters)
     if (Object.keys(validation).length > 0) {
       setFormErrors(validation)
       return
@@ -299,20 +212,21 @@ export function MeasurementsPage() {
     let savedCount = 0
 
     try {
-      for (const parameter of PARAMETERS) {
-        const value = values.values[parameter.key]
+      for (const parameter of parameters) {
+        const value = values.values[parameter.slug]
         if (value === '') continue
 
         try {
-          await parameter.create(selectedAquariumId, {
+          await createMeasurementByParameter(selectedAquariumId, parameter.slug, {
             value: Number(value),
+            unit: parameter.unit,
             measuredAt: toIsoString(values.measuredAtLocal),
           })
           savedCount += 1
         } catch (error) {
-          failureMessages.push(`${parameter.label}: ${toUserMessage(error)}`)
+          failureMessages.push(`${parameter.displayName}: ${toUserMessage(error)}`)
           if (error instanceof ApiRequestError && error.validationErrors?.length) {
-            Object.assign(nextErrors, mapApiValidationErrors(error, parameter.key))
+            Object.assign(nextErrors, mapApiValidationErrors(error, parameter.slug))
           }
         }
       }
@@ -322,8 +236,8 @@ export function MeasurementsPage() {
       }
 
       if (savedCount > 0) {
-        setFormValues(defaultFormValues())
-        await loadMeasurements(selectedAquariumId)
+        setFormValues(defaultFormValues(parameters))
+        await loadMeasurements(selectedAquariumId, parameters)
       }
 
       if (failureMessages.length > 0) {
@@ -362,7 +276,7 @@ export function MeasurementsPage() {
 
     try {
       await deleteMeasurement(selectedAquariumId, parameter, measurementId)
-      await loadMeasurements(selectedAquariumId)
+      await loadMeasurements(selectedAquariumId, parameters)
     } catch (error) {
       setDeleteError(toUserMessage(error))
     } finally {
@@ -385,38 +299,65 @@ export function MeasurementsPage() {
     }
   }
 
-  async function loadMeasurements(aquariumId: string, signal?: AbortSignal) {
-    setViewState('loading')
-    setHistoryError('')
+  async function loadParameters(signal?: AbortSignal) {
+    setParametersLoading(true)
+    setParametersError('')
 
     try {
-      const results = await Promise.all(
-        PARAMETERS.map((parameter) => parameter.list(aquariumId, signal)),
-      )
-
-      setMeasurements(results.flat())
-      setViewState('ready')
+      const records = await listParameters(signal)
+      const configs = toParameterConfigs(records)
+      setParameters(configs)
+      setFormValues(defaultFormValues(configs))
     } catch (error) {
-      setHistoryError(toUserMessage(error))
-      setViewState('error')
+      setParametersError(toUserMessage(error))
+    } finally {
+      setParametersLoading(false)
     }
   }
 
-  async function loadThresholds(aquariumId: string, signal?: AbortSignal) {
-    try {
-      const results = await Promise.all(
-        PARAMETERS.map((parameter) => getThreshold(aquariumId, parameter.key, signal)),
-      )
+  async function loadMeasurements(aquariumId: string, parameters: ParameterConfig[], signal?: AbortSignal) {
+    setViewState('loading')
+    setHistoryError('')
 
-      const next = {} as Record<MeasurementParameter, ThresholdRecord | null>
-      PARAMETERS.forEach((parameter, index) => {
-        next[parameter.key] = results[index]
-      })
-      setThresholds(next)
-    } catch {
-      // Configured limits are a chart enhancement, not core data - degrade to unannotated trend lines.
-      setThresholds(emptyThresholds())
+    // A parameter can appear in the catalog before the backend's fixed
+    // measurement rule set recognizes it, so isolate failures per-parameter
+    // instead of letting one unsupported parameter blank out the whole page.
+    // Only surface the error banner if every request failed.
+    const results = await Promise.allSettled(
+      parameters.map((parameter) => listMeasurementsByParameter(aquariumId, parameter.slug, signal)),
+    )
+
+    const fulfilled = results.filter(
+      (result): result is PromiseFulfilledResult<MeasurementRecord[]> => result.status === 'fulfilled',
+    )
+    const firstRejection = results.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    )
+
+    if (fulfilled.length === 0 && firstRejection) {
+      setHistoryError(toUserMessage(firstRejection.reason))
+      setViewState('error')
+      return
     }
+
+    setMeasurements(fulfilled.flatMap((result) => result.value))
+    setViewState('ready')
+  }
+
+  async function loadThresholds(aquariumId: string, parameters: ParameterConfig[], signal?: AbortSignal) {
+    // A parameter can appear in the catalog before the backend's fixed threshold
+    // rule set recognizes it, so isolate failures per-parameter instead of
+    // letting one unsupported parameter blank out every threshold.
+    const results = await Promise.allSettled(
+      parameters.map((parameter) => getThreshold(aquariumId, parameter.slug as ThresholdParameter, signal)),
+    )
+
+    const next: Record<MeasurementParameter, ThresholdRecord | null> = {}
+    parameters.forEach((parameter, index) => {
+      const result = results[index]
+      next[parameter.slug] = result.status === 'fulfilled' ? result.value : null
+    })
+    setThresholds(next)
   }
 
   return (
@@ -428,7 +369,7 @@ export function MeasurementsPage() {
         </Text>
       </Stack>
 
-      {aquariumsLoading && <MeasurementsLoadingState />}
+      {(aquariumsLoading || parametersLoading) && <MeasurementsLoadingState />}
 
       {!aquariumsLoading && aquariumsError && (
         <Alert color="red" title="Could not load aquariums">
@@ -443,7 +384,20 @@ export function MeasurementsPage() {
         </Alert>
       )}
 
-      {!aquariumsLoading && !aquariumsError && aquariums.length === 0 && (
+      {!aquariumsLoading && !parametersLoading && !aquariumsError && parametersError && (
+        <Alert color="red" title="Could not load parameters">
+          <Stack gap="sm">
+            <Text size="sm">{parametersError}</Text>
+            <Group>
+              <Button variant="outline" size="xs" onClick={handleRetryParameters}>
+                Retry
+              </Button>
+            </Group>
+          </Stack>
+        </Alert>
+      )}
+
+      {!aquariumsLoading && !parametersLoading && !aquariumsError && !parametersError && aquariums.length === 0 && (
         <Box
           py="xl"
           px="md"
@@ -460,7 +414,7 @@ export function MeasurementsPage() {
         </Box>
       )}
 
-      {!aquariumsLoading && !aquariumsError && aquariums.length > 0 && (
+      {!aquariumsLoading && !aquariumsError && !parametersLoading && !parametersError && aquariums.length > 0 && (
         <>
           <Card withBorder>
             <Card.Section p="md">
@@ -474,42 +428,48 @@ export function MeasurementsPage() {
                 />
 
                 <Grid gap="md" align="end">
-                  {PARAMETERS.map((parameter) => (
-                    <Grid.Col key={parameter.key} span={{ base: 12, xs: 6, sm: 4, md: 3 }}>
-                      <NumberInput
-                        label={`${parameter.label} (${parameter.unit})`}
-                        value={formValues.values[parameter.key]}
-                        onChange={(value) =>
-                          handleValueChange(parameter.key, value === '' ? '' : Number(value))
-                        }
-                        error={formErrors[parameter.key]}
-                        decimalScale={parameter.decimalScale}
-                        allowNegative={false}
-                        min={0.01}
-                        clampBehavior="none"
-                        placeholder={parameter.placeholder}
-                        disabled={saving}
-                      />
-                    </Grid.Col>
-                  ))}
-                  <Grid.Col span={{ base: 12, sm: 8, md: 6 }}>
-                    <TextInput
-                      type="datetime-local"
-                      label="Measured At"
-                      value={formValues.measuredAtLocal}
-                      onChange={(event) => {
-                        const measuredAtLocal = event.currentTarget.value
-                        setFormValues((current) => ({ ...current, measuredAtLocal }))
-                      }}
-                      error={formErrors.measuredAtLocal}
-                      disabled={saving}
-                    />
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, sm: 4, md: 3 }}>
-                    <Button fullWidth onClick={handleFormSubmit} loading={saving}>
-                      Add
-                    </Button>
-                  </Grid.Col>
+                  <Table.ScrollContainer minWidth={400}>
+                    <Table verticalSpacing="xs">
+                      <Table.Tbody>
+                        {parameters.map((parameter) => (
+                          <Table.Tr key={parameter.slug}>
+                            <Table.Td>{parameter.displayName}</Table.Td>
+                            <Table.Td w={150}>
+                              <NumberInput
+                                aria-label={`${parameter.displayName} (${parameter.unit})`}
+                                value={formValues.values[parameter.slug]}
+                                onChange={(value) =>
+                                  handleValueChange(parameter.slug, value === '' ? '' : Number(value))
+                                }
+                                error={formErrors[parameter.slug]}
+                                allowNegative={false}
+                                min={0.01}
+                                clampBehavior="none"
+                                placeholder="Enter value"
+                                disabled={saving}
+                              />
+                            </Table.Td>
+                            <Table.Td>{parameter.unit}</Table.Td>
+                          </Table.Tr>
+                        ))}
+                        <Table.Tr>
+                          <Table.Td>
+                            <TextInput
+                              type="datetime-local"
+                              label="Measured At"
+                              value={formValues.measuredAtLocal}
+                              onChange={(event) => {
+                                const measuredAtLocal = event.currentTarget.value
+                                setFormValues((current) => ({ ...current, measuredAtLocal }))
+                              }}
+                              error={formErrors.measuredAtLocal}
+                              disabled={saving}
+                            /><Button fullWidth onClick={handleFormSubmit} loading={saving}>Add</Button>
+                          </Table.Td>
+                        </Table.Tr>
+                      </Table.Tbody>
+                    </Table>
+                  </Table.ScrollContainer>
                 </Grid>
 
                 {submitError && (
@@ -578,17 +538,17 @@ export function MeasurementsPage() {
 
           {viewState === 'ready' && sortedMeasurements.length > 0 && (
             <Stack gap="md">
-              {PARAMETERS.map((parameter) => (
-                <Stack gap="md" key={parameter.key}>
+              {parameters.map((parameter) => (
+                <Stack gap="md" key={parameter.slug}>
                   <ParameterTrendChart
                     parameter={parameter}
-                    measurements={measurementsByParameter[parameter.key]}
-                    threshold={thresholds[parameter.key]}
+                    measurements={measurementsByParameter[parameter.slug]}
+                    threshold={thresholds[parameter.slug]}
                     showEmpty={showEmpty}
                   />
                   <MeasurementHistoryTable
                     parameter={parameter}
-                    measurements={measurementsByParameter[parameter.key]}
+                    measurements={measurementsByParameter[parameter.slug]}
                     deletingMeasurementId={deletingMeasurementId}
                     onDelete={requestDeleteMeasurement}
                     showEmpty={showEmpty}
@@ -610,7 +570,9 @@ export function MeasurementsPage() {
         <Stack gap="md">
           <Text size="sm">
             Are you sure you want to delete this{' '}
-            {pendingDelete ? PARAMETERS.find((parameter) => parameter.key === pendingDelete.parameter)?.label : ''}{' '}
+            {pendingDelete
+              ? parameters.find((parameter) => parameter.slug === pendingDelete.parameter)?.displayName
+              : ''}{' '}
             measurement? This cannot be undone.
           </Text>
           <Group justify="flex-end">
@@ -652,21 +614,21 @@ function MeasurementHistoryTable({
   onDelete,
   showEmpty,
 }: MeasurementHistoryTableProps) {
-  const title = `${parameter.label} History`
+  const title = `${parameter.displayName} History`
 
   if (measurements.length === 0) {
     if (!showEmpty) return null
 
     return (
       <Alert color="gray" title={`${title} unavailable`}>
-        <Text size="sm">No {parameter.label.toLowerCase()} entries are available yet for this aquarium.</Text>
+        <Text size="sm">No {parameter.displayName.toLowerCase()} entries are available yet for this aquarium.</Text>
       </Alert>
     )
   }
 
   return (
     <Card withBorder>
-      <Card.Section p="md" data-testid={`${parameter.key}-history-table`}>
+      <Card.Section p="md" data-testid={`${parameter.slug}-history-table`}>
         <Stack gap="xs">
           <Text fw={600}>{title}</Text>
           <Table withTableBorder highlightOnHover>
@@ -682,7 +644,7 @@ function MeasurementHistoryTable({
                 <Table.Tr key={measurement.id}>
                   <Table.Td>{formatDate(measurement.measuredAt)}</Table.Td>
                   <Table.Td>
-                    {measurement.value.toFixed(parameter.decimalScale)} {parameter.unit}
+                    {measurement.value} {parameter.unit}
                   </Table.Td>
                   <Table.Td ta="right">
                     <Button
@@ -744,9 +706,9 @@ function ParameterTrendChart({
     if (!showEmpty) return null
 
     return (
-      <Alert color="gray" title={`${parameter.label} trend unavailable`}>
+      <Alert color="gray" title={`${parameter.displayName} trend unavailable`}>
         <Text size="sm">
-          At least two {parameter.label.toLowerCase()} measurements are needed to render a trend line.
+          At least two {parameter.displayName.toLowerCase()} measurements are needed to render a trend line.
         </Text>
       </Alert>
     )
@@ -755,20 +717,18 @@ function ParameterTrendChart({
   const ordered = [...measurements].sort((a, b) => Date.parse(a.measuredAt) - Date.parse(b.measuredAt))
   const chartData = ordered.map((item) => ({
     measuredAt: formatShortDate(item.measuredAt),
-    [parameter.key]: item.value,
+    [parameter.slug]: item.value,
   }))
-  const values = chartData.map((item) => item[parameter.key] as number)
-  const visuals = computeThresholdVisuals(threshold, values, parameter.label, (value) =>
-    value.toFixed(parameter.decimalScale),
-  )
+  const values = chartData.map((item) => item[parameter.slug] as number)
+  const visuals = computeThresholdVisuals(threshold, values, parameter.displayName, (value) => String(value))
 
   return (
     <Card withBorder>
       <Card.Section p="md">
         <Stack gap="xs">
-          <Text fw={600}>{parameter.label} Trend ({parameter.unit})</Text>
+          <Text fw={600}>{parameter.displayName} Trend ({parameter.unit})</Text>
           <Text c="dimmed" size="sm">
-            Displaying all recorded {parameter.label.toLowerCase()} measurements for the selected aquarium.
+            Displaying all recorded {parameter.displayName.toLowerCase()} measurements for the selected aquarium.
           </Text>
           <Box ref={chartContainerRef} mih={240}>
             {canRenderChart ? (
@@ -780,12 +740,11 @@ function ParameterTrendChart({
                 gradientStops={visuals.gradientStops}
                 yAxisProps={{ domain: [visuals.yDomainMin, visuals.yDomainMax] }}
                 referenceLines={visuals.referenceLines}
-                series={[{ name: parameter.key, label: parameter.label }]}
+                series={[{ name: parameter.slug, label: parameter.displayName }]}
                 curveType="monotone"
                 withDots
                 withLegend
                 unit={` ${parameter.unit}`}
-                valueFormatter={(value) => value.toFixed(parameter.decimalScale)}
                 tooltipAnimationDuration={200}
               />
             ) : (
@@ -849,22 +808,23 @@ function computeThresholdVisuals(
 
 function validateMeasurement(
   values: MeasurementFormValues,
+  parameters: ParameterConfig[],
 ): Partial<Record<MeasurementParameter | 'measuredAtLocal', string>> {
   const errors: Partial<Record<MeasurementParameter | 'measuredAtLocal', string>> = {}
 
-  const hasAnyValue = PARAMETERS.some((parameter) => values.values[parameter.key] !== '')
+  const hasAnyValue = parameters.some((parameter) => values.values[parameter.slug] !== '')
 
   if (!hasAnyValue) {
     const message = 'Enter at least one measurement value to submit.'
-    for (const parameter of PARAMETERS) {
-      errors[parameter.key] = message
+    for (const parameter of parameters) {
+      errors[parameter.slug] = message
     }
   }
 
-  for (const parameter of PARAMETERS) {
-    const value = values.values[parameter.key]
+  for (const parameter of parameters) {
+    const value = values.values[parameter.slug]
     if (value !== '' && (Number.isNaN(Number(value)) || Number(value) <= 0)) {
-      errors[parameter.key] = `Enter a ${parameter.label.toLowerCase()} value greater than 0 ${parameter.unit}.`
+      errors[parameter.slug] = `Enter a ${parameter.displayName.toLowerCase()} value greater than 0 ${parameter.unit}.`
     }
   }
 
