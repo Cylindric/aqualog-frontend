@@ -2,9 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { Provider } from '../../components/ui/provider'
 import { AuthCallbackPage } from '../../pages/AuthCallbackPage'
+import { config } from '../../config'
 
 const authMock = vi.fn()
 const navigateMock = vi.fn()
@@ -32,6 +33,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 describe('AuthCallbackPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    config.authMode = 'oauth'
     authMock.mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
@@ -108,5 +110,23 @@ describe('AuthCallbackPage', () => {
     expect(screen.getByText(/authentication required/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^sign in$/i }))
     expect(signinRedirect).toHaveBeenCalledTimes(1)
+  })
+
+  it('redirects to home without calling useAuth when auth mode is none', () => {
+    config.authMode = 'none'
+
+    render(
+      <Provider>
+        <MemoryRouter initialEntries={['/auth/callback']}>
+          <Routes>
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            <Route path="/" element={<div>Home page</div>} />
+          </Routes>
+        </MemoryRouter>
+      </Provider>,
+    )
+
+    expect(screen.getByText('Home page')).toBeInTheDocument()
+    expect(authMock).not.toHaveBeenCalled()
   })
 })

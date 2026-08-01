@@ -38,6 +38,7 @@ function renderShell(initialPath = '/dashboard') {
 
 beforeEach(() => {
   config.appVersionDisplay = 'v1.6.0'
+  config.authMode = 'oauth'
 
   readinessMock.mockReturnValue({
     state: 'ready',
@@ -134,5 +135,15 @@ describe('Shell navigation layout', () => {
     renderShell('/dashboard')
 
     expect(screen.getByText('Authenticated')).toBeInTheDocument()
+  })
+
+  it('hides sign-out and identity badge when auth mode is none', () => {
+    config.authMode = 'none'
+    authMock.mockClear()
+    renderShell('/dashboard')
+
+    expect(screen.queryByText(/authenticated/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument()
+    expect(authMock).not.toHaveBeenCalled()
   })
 })

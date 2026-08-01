@@ -24,6 +24,7 @@ def _runtime_config() -> dict[str, str]:
     # Only return the variables needed by the frontend, and filter out any that are not needed
     whitelist = [
         "AQUALOG_API_BASE_URL",
+        "AQUALOG_AUTH_MODE",
         "AQUALOG_OAUTH_ISSUER_URL",
         "AQUALOG_OAUTH_CLIENT_ID",
         "AQUALOG_OIDC_REDIRECT_URI",
