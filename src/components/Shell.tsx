@@ -102,7 +102,7 @@ function AuthStatusBadge() {
   return (
     <Group gap="xs">
       <Badge color="green" variant="light" radius="xl" px="xs" py="2px">
-        {identity ? `Authenticated as ${identity}` : 'Authenticated'}
+        {identity ? `Hi, ${identity}` : 'Authenticated'}
       </Badge>
       {config.authMode === 'oauth' && <SignOutButton />}
     </Group>
