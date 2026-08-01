@@ -1,3 +1,14 @@
+## v1.14.0 (2026-08-01)
+
+### Feat
+
+- parameters are now dynamically loaded
+- initial work on auto-parameter frontend
+
+### Fix
+
+- reframe main window
+
 ## v1.13.0 (2026-07-27)
 
 ### Feat
