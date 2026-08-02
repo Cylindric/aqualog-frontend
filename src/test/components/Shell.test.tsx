@@ -76,14 +76,14 @@ describe('Shell navigation layout', () => {
   it('renders desktop and compact primary nav containers', () => {
     renderShell('/dashboard')
 
-    expect(screen.getByTestId('desktop-double-navbar')).toBeInTheDocument()
+    expect(screen.getByTestId('desktop-nav-rail')).toBeInTheDocument()
     expect(screen.getByTestId('compact-primary-nav')).toBeInTheDocument()
   })
 
   it('marks active destination in desktop and compact navigation', () => {
     renderShell('/calculator')
 
-    const desktopNav = screen.getByTestId('desktop-double-navbar')
+    const desktopNav = screen.getByTestId('desktop-nav-rail')
     const compactNav = screen.getByTestId('compact-primary-nav')
 
     const desktopCalculator = within(desktopNav)
@@ -103,7 +103,7 @@ describe('Shell navigation layout', () => {
     })
     renderShell('/dashboard')
 
-    expect(screen.queryByTestId('desktop-double-navbar')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('desktop-nav-rail')).not.toBeInTheDocument()
     expect(screen.queryByTestId('compact-primary-nav')).not.toBeInTheDocument()
   })
 
@@ -120,20 +120,20 @@ describe('Shell navigation layout', () => {
   it('renders version status line with v-prefixed value', () => {
     renderShell('/dashboard')
 
-    expect(screen.getByTestId('app-version-status')).toHaveTextContent('Version: v1.6.0')
+    expect(screen.getByTestId('app-version-status')).toHaveTextContent('AquaLog · v1.6.0')
   })
 
   it('renders unavailable fallback in status line', () => {
     config.appVersionDisplay = 'unavailable'
     renderShell('/dashboard')
 
-    expect(screen.getByTestId('app-version-status')).toHaveTextContent('Version: unavailable')
+    expect(screen.getByTestId('app-version-status')).toHaveTextContent('AquaLog · unavailable')
   })
 
   it('includes a profile navigation entry', () => {
     renderShell('/dashboard')
 
-    const desktopNav = screen.getByTestId('desktop-double-navbar')
+    const desktopNav = screen.getByTestId('desktop-nav-rail')
     const compactNav = screen.getByTestId('compact-primary-nav')
 
     expect(within(desktopNav).getAllByRole('link', { name: /profile/i }).length).toBeGreaterThan(0)
@@ -157,7 +157,7 @@ describe('Shell navigation layout', () => {
     })
     renderShell('/dashboard')
 
-    expect(screen.getByText('Authenticated as fishkeeper42')).toBeInTheDocument()
+    expect(screen.getByText('Hi, fishkeeper42')).toBeInTheDocument()
   })
 
   it('prefers display name over username in the authenticated badge', () => {
@@ -177,7 +177,7 @@ describe('Shell navigation layout', () => {
     })
     renderShell('/dashboard')
 
-    expect(screen.getByText('Authenticated as Fish Keeper')).toBeInTheDocument()
+    expect(screen.getByText('Hi, Fish Keeper')).toBeInTheDocument()
   })
 
   it('falls back to plain Authenticated badge when no username or display name is present', () => {
@@ -218,7 +218,7 @@ describe('Shell navigation layout', () => {
     })
     renderShell('/dashboard')
 
-    expect(screen.getByText('Authenticated as fishkeeper42')).toBeInTheDocument()
+    expect(screen.getByText('Hi, fishkeeper42')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument()
     expect(authMock).not.toHaveBeenCalled()
   })

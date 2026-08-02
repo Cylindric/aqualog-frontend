@@ -18,12 +18,12 @@ export function ConfigErrorPage() {
         {errors.map((err) => (
           <Box
             key={err}
-            bg="var(--mantine-color-red-0)"
+            bg="var(--mantine-color-red-9)"
             px="sm"
             py="xs"
-            style={{ borderRadius: 'var(--mantine-radius-md)', border: '1px solid var(--mantine-color-red-4)' }}
+            style={{ borderRadius: 'var(--mantine-radius-md)', border: '1px solid var(--mantine-color-red-7)' }}
           >
-            <Text c="red.8" size="sm">
+            <Text c="red.3" size="sm">
               {err}
             </Text>
           </Box>
