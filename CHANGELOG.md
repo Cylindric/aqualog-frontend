@@ -1,3 +1,11 @@
+## v1.17.1 (2026-08-05)
+
+### Fix
+
+- update test tasks
+- tests
+- bump jsdom from 30.0.0 to 30.0.1
+
 ## v1.17.0 (2026-08-05)
 
 ### Feat
