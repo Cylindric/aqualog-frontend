@@ -115,10 +115,10 @@ function renderPage(id = 'aq-1') {
 }
 
 function parameterCard(label: string): HTMLElement {
-  const heading = screen.getByText(label)
-  const card = heading.closest('.mantine-Card-root')
-  if (!card) throw new Error(`Could not find card for ${label}`)
-  return card as HTMLElement
+  const cell = screen.getByText(label)
+  const row = cell.closest('tr')
+  if (!row) throw new Error(`Could not find row for ${label}`)
+  return row as HTMLElement
 }
 
 beforeEach(() => {

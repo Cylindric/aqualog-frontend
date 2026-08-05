@@ -9,6 +9,7 @@ import {
   Select,
   Skeleton,
   Stack,
+  Table,
   Text,
   TextInput,
   Title,
@@ -463,9 +464,11 @@ export function AquariumDetailPage() {
           <Title order={3}>Parameter Limits</Title>
 
           {parametersLoading && (
-            <Stack gap="sm">
-              <Skeleton h={140} radius="md" />
-              <Skeleton h={140} radius="md" />
+            <Stack gap={4}>
+              <Skeleton h={32} radius="sm" />
+              <Skeleton h={32} radius="sm" />
+              <Skeleton h={32} radius="sm" />
+              <Skeleton h={32} radius="sm" />
             </Stack>
           )}
 
@@ -483,69 +486,92 @@ export function AquariumDetailPage() {
           )}
 
           {!parametersLoading && !parametersError && (
-            <Stack gap="md">
-              {parameters.map((parameter) => {
-                const row = thresholdRows[parameter.slug] ?? defaultThresholdRowState()
-                return (
-                  <Card key={parameter.slug} withBorder padding="lg">
-                    <Stack gap="sm">
-                      <Text fw={500}>
-                        {parameter.displayName} ({parameter.unit})
-                      </Text>
-
-                      {row.loading ? (
-                        <Skeleton h={36} radius="md" />
-                      ) : (
-                        <>
-                          <Group grow align="end">
-                            <NumberInput
-                              label="Min"
-                              value={row.values.min}
-                              onChange={(value) =>
-                                handleThresholdFieldChange(parameter.slug, 'min', toNumberOrEmpty(value))
-                              }
-                              error={row.fieldErrors.min}
-                              clampBehavior="none"
-                            />
-                            <NumberInput
-                              label="Target"
-                              value={row.values.target}
-                              onChange={(value) =>
-                                handleThresholdFieldChange(parameter.slug, 'target', toNumberOrEmpty(value))
-                              }
-                              error={row.fieldErrors.target}
-                              clampBehavior="none"
-                            />
-                            <NumberInput
-                              label="Max"
-                              value={row.values.max}
-                              onChange={(value) =>
-                                handleThresholdFieldChange(parameter.slug, 'max', toNumberOrEmpty(value))
-                              }
-                              error={row.fieldErrors.max}
-                              clampBehavior="none"
-                            />
-                          </Group>
-
-                          {row.error ? <Text c="red" size="sm">{row.error}</Text> : null}
-
-                          <Group justify="end">
-                            <Button
-                              size="xs"
-                              variant="outline"
-                              loading={row.saving}
-                              onClick={() => void handleSaveThresholdRow(parameter.slug)}
-                            >
-                              Save {parameter.displayName} Limits
-                            </Button>
-                          </Group>
-                        </>
-                      )}
-                    </Stack>
-                  </Card>
-                )
-              })}
-            </Stack>
+            <Card withBorder>
+              <Card.Section p="md">
+                <Table.ScrollContainer minWidth={520}>
+                  <Table verticalSpacing="xs">
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Parameter</Table.Th>
+                        <Table.Th>Min</Table.Th>
+                        <Table.Th>Target</Table.Th>
+                        <Table.Th>Max</Table.Th>
+                        <Table.Th />
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {parameters.map((parameter) => {
+                        const row = thresholdRows[parameter.slug] ?? defaultThresholdRowState()
+                        return (
+                          <Table.Tr key={parameter.slug}>
+                            <Table.Td>
+                              {parameter.displayName} ({parameter.unit})
+                            </Table.Td>
+                            {row.loading ? (
+                              <>
+                                <Table.Td colSpan={4}>
+                                  <Skeleton h={28} radius="sm" />
+                                </Table.Td>
+                              </>
+                            ) : (
+                              <>
+                                <Table.Td w={110}>
+                                  <NumberInput
+                                    aria-label="Min"
+                                    value={row.values.min}
+                                    onChange={(value) =>
+                                      handleThresholdFieldChange(parameter.slug, 'min', toNumberOrEmpty(value))
+                                    }
+                                    error={row.fieldErrors.min}
+                                    clampBehavior="none"
+                                  />
+                                </Table.Td>
+                                <Table.Td w={110}>
+                                  <NumberInput
+                                    aria-label="Target"
+                                    value={row.values.target}
+                                    onChange={(value) =>
+                                      handleThresholdFieldChange(parameter.slug, 'target', toNumberOrEmpty(value))
+                                    }
+                                    error={row.fieldErrors.target}
+                                    clampBehavior="none"
+                                  />
+                                </Table.Td>
+                                <Table.Td w={110}>
+                                  <NumberInput
+                                    aria-label="Max"
+                                    value={row.values.max}
+                                    onChange={(value) =>
+                                      handleThresholdFieldChange(parameter.slug, 'max', toNumberOrEmpty(value))
+                                    }
+                                    error={row.fieldErrors.max}
+                                    clampBehavior="none"
+                                  />
+                                </Table.Td>
+                                <Table.Td w={100}>
+                                  <Stack gap={4}>
+                                    <Button
+                                      size="xs"
+                                      variant="outline"
+                                      loading={row.saving}
+                                      aria-label={`Save ${parameter.displayName} limits`}
+                                      onClick={() => void handleSaveThresholdRow(parameter.slug)}
+                                    >
+                                      Save
+                                    </Button>
+                                    {row.error ? <Text c="red" size="xs">{row.error}</Text> : null}
+                                  </Stack>
+                                </Table.Td>
+                              </>
+                            )}
+                          </Table.Tr>
+                        )
+                      })}
+                    </Table.Tbody>
+                  </Table>
+                </Table.ScrollContainer>
+              </Card.Section>
+            </Card>
           )}
         </>
       )}
