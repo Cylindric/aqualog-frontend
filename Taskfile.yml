@@ -87,7 +87,6 @@ tasks:
       - cmd: npm ci
       - cmd: npm run dev
 
-
   test:
     desc: Run the test suite with coverage summary and HTML test report
     env:
@@ -95,6 +94,13 @@ tasks:
     cmds:
       - cmd: mkdir -p artifacts/tests
       - cmd: poetry run npm test
+
+  test-results:
+    desc: Show test results report in the browser
+    interactive: true
+    silent: true
+    cmds:
+      - cmd: poetry run npx vite preview --outDir artifacts/tests
 
   clean:
     desc: Clean up build artifacts and temporary files
