@@ -148,10 +148,11 @@ function DesktopNavRail() {
       </Text>
 
       {PRIMARY_NAV_ITEMS.map((item) => (
-        <NavLink key={item.to} to={item.to} end>
+        <NavLink key={item.to} to={item.to} end style={{ textDecoration: 'none' }}>
           {({ isActive }) => (
             <Anchor
               component="span"
+              underline="never"
               aria-current={isActive ? 'page' : undefined}
               px="10px"
               py="9px"
@@ -190,10 +191,11 @@ function CompactPrimaryNav() {
       <ScrollArea type="never" scrollbarSize={0}>
         <Group gap="xs" wrap="nowrap">
           {PRIMARY_NAV_ITEMS.map((item) => (
-            <NavLink key={`compact-${item.to}`} to={item.to} end>
+            <NavLink key={`compact-${item.to}`} to={item.to} end style={{ textDecoration: 'none' }}>
               {({ isActive }) => (
                 <Anchor
                   component="span"
+                  underline="never"
                   aria-current={isActive ? 'page' : undefined}
                   px="sm"
                   py="6px"
