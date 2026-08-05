@@ -2,5 +2,20 @@
   "attribution": {
     "commit": "",
     "pr": ""
+  },
+  "permissions": {
+    "allow": [
+      "Read(.)",
+      "Read(//tmp/**)",
+      "Bash(curl *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npm run *)",
+      "Bash(npm view *)",
+      "Bash(npm ls *)",
+      "Bash(npm install *)",
+      "Bash(npx vitest *)",
+      "Bash(openspec status *)"
+    ]
   }
 }
