@@ -4,7 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  Drawer,
   Flex,
   Group,
   Modal,
@@ -199,7 +198,7 @@ export function AquariumsPage() {
           px="md"
           ta="center"
           style={{
-            border: '1px dashed var(--mantine-color-gray-4)',
+            border: '1px dashed var(--mantine-color-dark-4)',
             borderRadius: 'var(--mantine-radius-md)',
           }}
         >
@@ -282,12 +281,11 @@ export function AquariumsPage() {
         </Stack>
       </Modal>
 
-      <Drawer
+      <Modal
         opened={drawerOpen}
         onClose={handleCloseDrawer}
-        position="right"
-        size="md"
         title="Add Aquarium"
+        centered
       >
         <Stack gap="md">
           <TextInput
@@ -356,7 +354,7 @@ export function AquariumsPage() {
             </Button>
           </Group>
         </Stack>
-      </Drawer>
+      </Modal>
     </Stack>
   )
 }

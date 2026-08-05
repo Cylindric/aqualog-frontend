@@ -3,16 +3,14 @@ import {
   Badge,
   Box,
   Button,
-  Divider,
   Flex,
   Group,
   ScrollArea,
   Skeleton,
   Stack,
-  ThemeIcon,
   Text,
 } from '@mantine/core'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { NavLink } from 'react-router'
 import { useReadinessCheck } from '../hooks/useReadinessCheck'
 import { useAuth } from 'react-oidc-context'
@@ -37,16 +35,18 @@ export function Shell({ children }: ShellProps) {
         py="sm"
         pos="sticky"
         top={0}
-        style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}
+        style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}
         align="center"
         justify="space-between"
+        wrap="wrap"
+        gap="sm"
       >
-        <Group gap="sm" wrap="nowrap">
-          <Text fw={700} size="lg">
-            🐠 MyAquariumLog
+        <Group gap="sm" wrap="nowrap" align="baseline">
+          <Text fw={600} size="lg">
+            AquaLog
           </Text>
           <Text c="dimmed" size="sm" visibleFrom="sm">
-            Aquarium Logging and Tracking
+            Aquarium logging and tracking
           </Text>
         </Group>
         <AuthStatusBadge />
@@ -56,8 +56,8 @@ export function Shell({ children }: ShellProps) {
       {state === 'ready' && <CompactPrimaryNav />}
 
       <Flex flex={1} mih={0} style={{ overflow: 'hidden' }}>
-        {/* Double navbar on tablet and desktop */}
-        {state === 'ready' && <DesktopDoubleNavbar />}
+        {/* Single-column labeled rail on tablet and desktop */}
+        {state === 'ready' && <DesktopNavRail />}
 
         {/* Main content, scrolls independently of the nav */}
         <Box
@@ -80,10 +80,10 @@ export function Shell({ children }: ShellProps) {
         py="6px"
         px="md"
         ta="center"
-        style={{ borderTop: '1px solid var(--mantine-color-gray-2)' }}
+        style={{ borderTop: '1px solid var(--mantine-color-dark-4)' }}
       >
         <Text size="xs" c="dimmed" data-testid="app-version-status">
-          Version: {config.appVersionDisplay}
+          AquaLog &middot; {config.appVersionDisplay}
         </Text>
       </Box>
     </Flex>
@@ -101,7 +101,7 @@ function AuthStatusBadge() {
 
   return (
     <Group gap="xs">
-      <Badge color="green" variant="light" radius="xl" px="xs" py="2px">
+      <Badge color="accent" variant="light" radius="xl" px="xs" py="2px">
         {identity ? `Hi, ${identity}` : 'Authenticated'}
       </Badge>
       {config.authMode === 'oauth' && <SignOutButton />}
@@ -119,68 +119,62 @@ function SignOutButton() {
   )
 }
 
-function DesktopDoubleNavbar() {
+function navItemStyle(isActive: boolean): CSSProperties {
+  return {
+    background: isActive ? 'var(--mantine-color-accent-8)' : 'transparent',
+    color: isActive ? 'var(--mantine-color-accent-1)' : 'var(--mantine-color-dark-3)',
+    fontWeight: isActive ? 600 : 400,
+  }
+}
+
+function DesktopNavRail() {
   return (
-    <Flex
+    <Stack
       component="nav"
-      data-testid="desktop-double-navbar"
+      data-testid="desktop-nav-rail"
       visibleFrom="sm"
+      gap={2}
+      w={200}
+      p="sm"
       h="100%"
       style={{
-        borderRight: '1px solid var(--mantine-color-gray-3)',
+        borderRight: '1px solid var(--mantine-color-dark-4)',
         flexShrink: 0,
         overflowY: 'auto',
       }}
     >
-      <Stack gap="xs" p="sm" align="center" justify="start" style={{ borderRight: '1px solid var(--mantine-color-gray-2)' }}>
-        {PRIMARY_NAV_ITEMS.map((item) => (
-          <NavLink key={`icon-${item.to}`} to={item.to} end>
-            {({ isActive }) => (
-              <ThemeIcon
-                variant={isActive ? 'filled' : 'light'}
-                color={isActive ? 'blue' : 'gray'}
-                radius="md"
-                size={40}
-                aria-label={item.label}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <Text lh={1}>{item.icon}</Text>
-              </ThemeIcon>
-            )}
-          </NavLink>
-        ))}
-      </Stack>
+      <Text fw={600} size="10px" tt="uppercase" c="dimmed" px="xs" pb="6px" style={{ letterSpacing: '0.08em' }}>
+        Navigation
+      </Text>
 
-      <Stack gap="xs" p="sm" w={220}>
-        <Text fw={700} size="sm" c="dimmed" px="xs" pt="2px">
-          Navigation
-        </Text>
-        <Divider mb="2px" />
-
-        {PRIMARY_NAV_ITEMS.map((item) => (
-          <NavLink key={`label-${item.to}`} to={item.to} end>
-            {({ isActive }) => (
-              <Anchor
-                component="span"
-                aria-current={isActive ? 'page' : undefined}
-                c={isActive ? 'blue.7' : 'var(--mantine-color-text)'}
-                fw={isActive ? 700 : 500}
-                px="sm"
-                py="6px"
-                style={{
-                  borderRadius: 'var(--mantine-radius-sm)',
-                  background: isActive ? 'var(--mantine-color-blue-0)' : 'transparent',
-                  textDecoration: 'none',
-                  display: 'block',
-                }}
-              >
+      {PRIMARY_NAV_ITEMS.map((item) => (
+        <NavLink key={item.to} to={item.to} end style={{ textDecoration: 'none' }}>
+          {({ isActive }) => (
+            <Anchor
+              component="span"
+              underline="never"
+              aria-current={isActive ? 'page' : undefined}
+              px="10px"
+              py="9px"
+              style={{
+                ...navItemStyle(isActive),
+                borderRadius: 'var(--mantine-radius-md)',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '14px',
+              }}
+            >
+              {item.icon}
+              <Text component="span" fw="inherit" fz="inherit" c="inherit">
                 {item.label}
-              </Anchor>
-            )}
-          </NavLink>
-        ))}
-      </Stack>
-    </Flex>
+              </Text>
+            </Anchor>
+          )}
+        </NavLink>
+      ))}
+    </Stack>
   )
 }
 
@@ -192,32 +186,35 @@ function CompactPrimaryNav() {
       hiddenFrom="sm"
       px="md"
       py="xs"
-      style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}
+      style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}
     >
       <ScrollArea type="never" scrollbarSize={0}>
         <Group gap="xs" wrap="nowrap">
           {PRIMARY_NAV_ITEMS.map((item) => (
-            <NavLink key={`compact-${item.to}`} to={item.to} end>
+            <NavLink key={`compact-${item.to}`} to={item.to} end style={{ textDecoration: 'none' }}>
               {({ isActive }) => (
                 <Anchor
                   component="span"
+                  underline="never"
                   aria-current={isActive ? 'page' : undefined}
-                  c={isActive ? 'blue.7' : 'var(--mantine-color-text)'}
-                  fw={isActive ? 700 : 500}
                   px="sm"
                   py="6px"
                   style={{
+                    ...navItemStyle(isActive),
+                    background: isActive ? 'var(--mantine-color-accent-8)' : 'var(--mantine-color-dark-6)',
                     borderRadius: 'var(--mantine-radius-lg)',
-                    background: isActive ? 'var(--mantine-color-blue-0)' : 'var(--mantine-color-gray-0)',
                     textDecoration: 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
                     whiteSpace: 'nowrap',
+                    fontSize: '13px',
                   }}
                 >
-                  <Text lh={1}>{item.icon}</Text>
-                  <Text size="sm" lh={1.1}>{item.label}</Text>
+                  {item.icon}
+                  <Text component="span" fz="inherit" fw="inherit" c="inherit" lh={1.1}>
+                    {item.label}
+                  </Text>
                 </Anchor>
               )}
             </NavLink>

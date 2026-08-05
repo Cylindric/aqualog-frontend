@@ -135,7 +135,7 @@ export function SalinityCalculator() {
           p="xl"
           ta="center"
           style={{
-            border: '1px dashed var(--mantine-color-gray-4)',
+            border: '1px dashed var(--mantine-color-dark-4)',
             borderRadius: 'var(--mantine-radius-xl)',
           }}
         >
@@ -156,13 +156,13 @@ export function SalinityCalculator() {
       )}
 
       {result && (
-        <Card withBorder bg="blue.0">
+        <Card withBorder shadow="md" style={{ borderColor: 'var(--mantine-color-accent-7)' }}>
           <Card.Section p="md">
             <Stack gap="xs">
               <Text c="dimmed" size="sm">
                 Salt to add
               </Text>
-              <Text size="2rem" fw={700}>
+              <Text size="2rem" fw={700} c="accent.2">
                 {formatDoseResult(result)}
               </Text>
               <Text c="dimmed" size="xs">

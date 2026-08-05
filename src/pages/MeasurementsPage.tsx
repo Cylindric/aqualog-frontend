@@ -403,7 +403,7 @@ export function MeasurementsPage() {
           px="md"
           ta="center"
           style={{
-            border: '1px dashed var(--mantine-color-gray-4)',
+            border: '1px dashed var(--mantine-color-dark-4)',
             borderRadius: 'var(--mantine-radius-md)',
           }}
         >
@@ -527,7 +527,7 @@ export function MeasurementsPage() {
               px="md"
               ta="center"
               style={{
-                border: '1px dashed var(--mantine-color-gray-4)',
+                border: '1px dashed var(--mantine-color-dark-4)',
                 borderRadius: 'var(--mantine-radius-md)',
               }}
             >
@@ -780,7 +780,7 @@ function computeThresholdVisuals(
 
   const referenceLines =
     target !== null
-      ? [{ y: target, label: `Target ${parameterLabel} (${formatValue(target)})`, color: 'green.7' }]
+      ? [{ y: target, label: `Target ${parameterLabel} (${formatValue(target)})`, color: 'accent.4' }]
       : undefined
 
   if (min === null && max === null) {

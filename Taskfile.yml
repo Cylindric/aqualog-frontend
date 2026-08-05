@@ -74,7 +74,6 @@ tasks:
       AQUALOG_AUTH_MODE: none
       AQUALOG_AUTH_IMPERSONATE_USER_ID: b85abf08-8958-48fd-988d-7ff93ab2ae6a
     cmds:
-      - cmd: env | grep AQUALOG_
       - cmd: npm ci
       - cmd: npm run build
       - cmd: poetry run uvicorn backend.main:app --reload --host 0.0.0.0 --port ${FRONTEND_PORT_HTTP}
