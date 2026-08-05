@@ -757,14 +757,21 @@ function ParameterTrendChart({
   )
 }
 
+interface ThresholdReferenceLine {
+  y: number
+  label: string
+  color: string
+  labelPosition?: 'insideTopLeft' | 'insideBottomLeft'
+}
+
 interface ThresholdVisuals {
   gradientStops?: { offset: number; color: string }[]
-  referenceLines?: { y: number; label: string; color: string }[]
+  referenceLines?: ThresholdReferenceLine[]
   yDomainMin: number
   yDomainMax: number
 }
 
-function computeThresholdVisuals(
+export function computeThresholdVisuals(
   threshold: ThresholdRecord | null,
   values: number[],
   parameterLabel: string,
@@ -778,10 +785,28 @@ function computeThresholdVisuals(
   const yDomainMin = Math.min(...values, ...boundValues)
   const yDomainMax = Math.max(...values, ...boundValues)
 
-  const referenceLines =
+  const referenceLineCandidates = [
     target !== null
-      ? [{ y: target, label: `Target ${parameterLabel} (${formatValue(target)})`, color: 'accent.4' }]
-      : undefined
+      ? { y: target, label: `Target ${parameterLabel} (${formatValue(target)})`, color: 'accent.4' }
+      : null,
+    min !== null
+      ? {
+          y: min,
+          label: `Min ${parameterLabel} (${formatValue(min)})`,
+          color: 'red.7',
+          labelPosition: 'insideBottomLeft' as const,
+        }
+      : null,
+    max !== null
+      ? {
+          y: max,
+          label: `Max ${parameterLabel} (${formatValue(max)})`,
+          color: 'red.7',
+          labelPosition: 'insideTopLeft' as const,
+        }
+      : null,
+  ].filter((line): line is ThresholdReferenceLine => line !== null)
+  const referenceLines = referenceLineCandidates.length > 0 ? referenceLineCandidates : undefined
 
   if (min === null && max === null) {
     return { referenceLines, yDomainMin, yDomainMax }
