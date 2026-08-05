@@ -1,3 +1,18 @@
+## v1.17.0 (2026-08-05)
+
+### Feat
+
+- load aquarium threshold parameters dynamically from the API
+- UI redesign
+
+### Fix
+
+- remove pink underline from main menu items
+
+### Refactor
+
+- make Parameter Limits a compact table, one row per parameter
+
 ## v1.16.1 (2026-08-05)
 
 ### Fix
