@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { Provider } from '../../components/ui/provider'
 import { AquariumDetailPage } from '../../pages/AquariumDetailPage'
 import { type AquariumRecord, getAquarium, updateAquarium } from '../../api/aquariums'
+import { listParameters, type ParameterRecord } from '../../api/parameters'
 import {
   THRESHOLD_UNITS,
   getThreshold,
@@ -18,6 +19,10 @@ import { ApiRequestError } from '../../api/client'
 vi.mock('../../api/aquariums', () => ({
   getAquarium: vi.fn(),
   updateAquarium: vi.fn(),
+}))
+
+vi.mock('../../api/parameters', () => ({
+  listParameters: vi.fn(),
 }))
 
 vi.mock('../../api/thresholds', async (importOriginal) => {
@@ -50,6 +55,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 const getAquariumMock = vi.mocked(getAquarium)
 const updateAquariumMock = vi.mocked(updateAquarium)
+const listParametersMock = vi.mocked(listParameters)
 const getThresholdMock = vi.mocked(getThreshold)
 const setThresholdMock = vi.mocked(setThreshold)
 
@@ -61,6 +67,30 @@ const baseAquarium: AquariumRecord = {
   createdAt: '2026-07-18T10:00:00Z',
   updatedAt: '2026-07-18T10:00:00Z',
 }
+
+function parameterFixture(slug: ThresholdParameter, displayName: string): ParameterRecord {
+  return {
+    slug,
+    displayName,
+    description: null,
+    unit: THRESHOLD_UNITS[slug],
+    createdAt: '2026-07-18T10:00:00Z',
+    updatedAt: '2026-07-18T10:00:00Z',
+  }
+}
+
+const PARAMETER_CATALOG: ParameterRecord[] = [
+  parameterFixture('temperature', 'Temperature'),
+  parameterFixture('salinity', 'Salinity'),
+  parameterFixture('phosphate', 'Phosphate'),
+  parameterFixture('calcium', 'Calcium'),
+  parameterFixture('magnesium', 'Magnesium'),
+  parameterFixture('alkalinity', 'Alkalinity'),
+  parameterFixture('ph', 'pH'),
+  parameterFixture('ammonia', 'Ammonia'),
+  parameterFixture('nitrite', 'Nitrite'),
+  parameterFixture('nitrate', 'Nitrate'),
+]
 
 function emptyThreshold(parameter: ThresholdParameter): ThresholdRecord {
   return {
@@ -95,6 +125,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   getAquariumMock.mockResolvedValue(baseAquarium)
   updateAquariumMock.mockResolvedValue(baseAquarium)
+  listParametersMock.mockResolvedValue(PARAMETER_CATALOG)
   getThresholdMock.mockImplementation(async (_aquariumId, parameter) => emptyThreshold(parameter))
 })
 
@@ -311,5 +342,62 @@ describe('AquariumDetailPage', () => {
     await user.click(screen.getByRole('button', { name: /retry/i }))
 
     expect(await screen.findByRole('heading', { name: 'Living Room Reef' })).toBeInTheDocument()
+  })
+
+  it('renders and saves a parameter that is not in the fixed threshold set', async () => {
+    const user = userEvent.setup()
+    listParametersMock.mockResolvedValue([
+      ...PARAMETER_CATALOG,
+      {
+        slug: 'copper' as ThresholdParameter,
+        displayName: 'Copper',
+        description: null,
+        unit: 'ppm',
+        createdAt: '2026-07-18T10:00:00Z',
+        updatedAt: '2026-07-18T10:00:00Z',
+      },
+    ])
+    setThresholdMock.mockResolvedValue({
+      aquariumId: 'aq-1',
+      parameter: 'copper' as ThresholdParameter,
+      min: null,
+      target: 0.2,
+      max: null,
+      unit: 'ppm',
+    })
+
+    renderPage()
+    await screen.findByRole('heading', { name: 'Living Room Reef' })
+
+    const copperCard = parameterCard('Copper (ppm)')
+    await user.type(within(copperCard).getByLabelText('Target'), '0.2')
+    await user.click(within(copperCard).getByRole('button', { name: /save copper limits/i }))
+
+    await waitFor(() => {
+      expect(setThresholdMock).toHaveBeenCalledWith('aq-1', 'copper', {
+        min: null,
+        target: 0.2,
+        max: null,
+      })
+    })
+  })
+
+  it('omits cards for parameters no longer in the catalog', async () => {
+    listParametersMock.mockResolvedValue(PARAMETER_CATALOG.filter((parameter) => parameter.slug !== 'nitrate'))
+
+    renderPage()
+    await screen.findByRole('heading', { name: 'Living Room Reef' })
+
+    expect(screen.queryByText('Nitrate (ppm)')).not.toBeInTheDocument()
+  })
+
+  it('keeps the aquarium form usable when parameters fail to load', async () => {
+    listParametersMock.mockRejectedValue(new TypeError('Failed to fetch'))
+
+    renderPage()
+    await screen.findByRole('heading', { name: 'Living Room Reef' })
+
+    expect(await screen.findByText(/could not load parameters/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/aquarium name/i)).toBeInTheDocument()
   })
 })
