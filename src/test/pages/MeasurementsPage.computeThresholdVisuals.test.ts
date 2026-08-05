@@ -53,4 +53,44 @@ describe('computeThresholdVisuals', () => {
       { y: 30, label: 'Min Salinity (30)', color: 'red.7', labelPosition: 'insideBottomLeft' },
     ])
   })
+
+  it('shades red only outside min/max, with a hard edge instead of a gradual fade toward target', () => {
+    // yDomainMin=25, yDomainMax=45 -> max(40) is at offset 25, min(30) is at offset 75
+    const visuals = computeThresholdVisuals(
+      threshold({ target: 35, min: 30, max: 40 }),
+      [25, 45],
+      'Salinity',
+      String,
+    )
+    expect(visuals.gradientStops).toEqual([
+      { offset: 0, color: 'red.7' },
+      { offset: 25, color: 'red.7' },
+      { offset: 25, color: 'green.6' },
+      { offset: 75, color: 'green.6' },
+      { offset: 75, color: 'red.7' },
+      { offset: 100, color: 'red.7' },
+    ])
+  })
+
+  it('shades green everywhere below max when there is no min', () => {
+    // yDomainMin=30, yDomainMax=50 -> max(40) is at offset 50
+    const visuals = computeThresholdVisuals(threshold({ max: 40 }), [30, 50], 'Salinity', String)
+    expect(visuals.gradientStops).toEqual([
+      { offset: 0, color: 'red.7' },
+      { offset: 50, color: 'red.7' },
+      { offset: 50, color: 'green.6' },
+      { offset: 100, color: 'green.6' },
+    ])
+  })
+
+  it('shades green everywhere above min when there is no max', () => {
+    // yDomainMin=20, yDomainMax=40 -> min(30) is at offset 50
+    const visuals = computeThresholdVisuals(threshold({ min: 30 }), [20, 40], 'Salinity', String)
+    expect(visuals.gradientStops).toEqual([
+      { offset: 0, color: 'green.6' },
+      { offset: 50, color: 'green.6' },
+      { offset: 50, color: 'red.7' },
+      { offset: 100, color: 'red.7' },
+    ])
+  })
 })
