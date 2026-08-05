@@ -14,9 +14,9 @@ import {
   Title,
 } from '@mantine/core'
 import { type AquariumRecord, getAquarium, updateAquarium } from '../api/aquariums'
+import { listParameters, type ParameterRecord } from '../api/parameters'
 import {
   THRESHOLD_SANITY_RANGES,
-  THRESHOLD_UNITS,
   getThreshold,
   setThreshold,
   type ThresholdParameter,
@@ -39,30 +39,20 @@ const AQUARIUM_TYPES = [
   'Freshwater Community',
 ]
 
-const THRESHOLD_PARAMETERS: ThresholdParameter[] = [
-  'temperature',
-  'salinity',
-  'phosphate',
-  'calcium',
-  'magnesium',
-  'alkalinity',
-  'ph',
-  'ammonia',
-  'nitrite',
-  'nitrate',
-]
+interface ThresholdParameterConfig {
+  slug: ThresholdParameter
+  displayName: string
+  unit: string
+}
 
-const PARAMETER_LABELS: Record<ThresholdParameter, string> = {
-  temperature: 'Temperature',
-  salinity: 'Salinity',
-  phosphate: 'Phosphate',
-  calcium: 'Calcium',
-  magnesium: 'Magnesium',
-  alkalinity: 'Alkalinity',
-  ph: 'pH',
-  ammonia: 'Ammonia',
-  nitrite: 'Nitrite',
-  nitrate: 'Nitrate',
+function toThresholdParameterConfigs(parameters: ParameterRecord[]): ThresholdParameterConfig[] {
+  return parameters
+    .filter((parameter): parameter is ParameterRecord & { unit: string } => parameter.unit !== null)
+    .map((parameter) => ({
+      slug: parameter.slug as ThresholdParameter,
+      displayName: parameter.displayName,
+      unit: parameter.unit,
+    }))
 }
 
 interface ThresholdFieldValues {
@@ -93,19 +83,14 @@ function defaultThresholdRowState(): ThresholdRowState {
   }
 }
 
-function defaultThresholdRows(): Record<ThresholdParameter, ThresholdRowState> {
-  return {
-    temperature: defaultThresholdRowState(),
-    salinity: defaultThresholdRowState(),
-    phosphate: defaultThresholdRowState(),
-    calcium: defaultThresholdRowState(),
-    magnesium: defaultThresholdRowState(),
-    alkalinity: defaultThresholdRowState(),
-    ph: defaultThresholdRowState(),
-    ammonia: defaultThresholdRowState(),
-    nitrite: defaultThresholdRowState(),
-    nitrate: defaultThresholdRowState(),
+type ThresholdRowsState = Partial<Record<ThresholdParameter, ThresholdRowState>>
+
+function seedThresholdRows(configs: ThresholdParameterConfig[]): ThresholdRowsState {
+  const rows: ThresholdRowsState = {}
+  for (const config of configs) {
+    rows[config.slug] = defaultThresholdRowState()
   }
+  return rows
 }
 
 export function AquariumDetailPage() {
@@ -126,9 +111,11 @@ export function AquariumDetailPage() {
   const [submitError, setSubmitError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const [thresholdRows, setThresholdRows] = useState<Record<ThresholdParameter, ThresholdRowState>>(
-    defaultThresholdRows(),
-  )
+  const [parameters, setParameters] = useState<ThresholdParameterConfig[]>([])
+  const [parametersLoading, setParametersLoading] = useState(true)
+  const [parametersError, setParametersError] = useState('')
+
+  const [thresholdRows, setThresholdRows] = useState<ThresholdRowsState>({})
 
   useEffect(() => {
     if (!id) {
@@ -138,12 +125,31 @@ export function AquariumDetailPage() {
 
     const controller = new AbortController()
     void loadAquarium(id, controller.signal)
-    void loadThresholds(id, controller.signal)
 
     return () => {
       controller.abort()
     }
   }, [id])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    void loadParameters(controller.signal)
+
+    return () => {
+      controller.abort()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!id || parameters.length === 0) return
+
+    const controller = new AbortController()
+    void loadThresholds(id, parameters, controller.signal)
+
+    return () => {
+      controller.abort()
+    }
+  }, [id, parameters])
 
   async function loadAquarium(aquariumId: string, signal?: AbortSignal) {
     setViewState('loading')
@@ -169,15 +175,31 @@ export function AquariumDetailPage() {
     }
   }
 
-  async function loadThresholds(aquariumId: string, signal?: AbortSignal) {
+  async function loadParameters(signal?: AbortSignal) {
+    setParametersLoading(true)
+    setParametersError('')
+
+    try {
+      const records = await listParameters(signal)
+      const configs = toThresholdParameterConfigs(records)
+      setParameters(configs)
+      setThresholdRows(seedThresholdRows(configs))
+    } catch (error) {
+      setParametersError(toUserMessage(error))
+    } finally {
+      setParametersLoading(false)
+    }
+  }
+
+  async function loadThresholds(aquariumId: string, configs: ThresholdParameterConfig[], signal?: AbortSignal) {
     await Promise.all(
-      THRESHOLD_PARAMETERS.map(async (parameter) => {
+      configs.map(async (config) => {
         try {
-          const record = await getThreshold(aquariumId, parameter, signal)
+          const record = await getThreshold(aquariumId, config.slug, signal)
           setThresholdRows((current) => ({
             ...current,
-            [parameter]: {
-              ...current[parameter],
+            [config.slug]: {
+              ...(current[config.slug] ?? defaultThresholdRowState()),
               values: {
                 min: record.min ?? '',
                 target: record.target ?? '',
@@ -189,8 +211,8 @@ export function AquariumDetailPage() {
         } catch (error) {
           setThresholdRows((current) => ({
             ...current,
-            [parameter]: {
-              ...current[parameter],
+            [config.slug]: {
+              ...(current[config.slug] ?? defaultThresholdRowState()),
               loading: false,
               error: toUserMessage(error),
             },
@@ -203,7 +225,13 @@ export function AquariumDetailPage() {
   const handleRetry = () => {
     if (!id) return
     void loadAquarium(id)
-    void loadThresholds(id)
+    if (parameters.length > 0) {
+      void loadThresholds(id, parameters)
+    }
+  }
+
+  const handleRetryParameters = () => {
+    void loadParameters()
   }
 
   const handleSubmit = async () => {
@@ -252,31 +280,33 @@ export function AquariumDetailPage() {
     field: keyof ThresholdFieldValues,
     value: number | '',
   ) => {
-    setThresholdRows((current) => ({
-      ...current,
-      [parameter]: {
-        ...current[parameter],
-        values: { ...current[parameter].values, [field]: value },
-      },
-    }))
+    setThresholdRows((current) => {
+      const row = current[parameter] ?? defaultThresholdRowState()
+      return {
+        ...current,
+        [parameter]: { ...row, values: { ...row.values, [field]: value } },
+      }
+    })
   }
 
   const handleSaveThresholdRow = async (parameter: ThresholdParameter) => {
     if (!id) return
 
     const row = thresholdRows[parameter]
+    if (!row) return
+
     const fieldErrors = validateThresholdRow(parameter, row.values)
     if (Object.keys(fieldErrors).length > 0) {
       setThresholdRows((current) => ({
         ...current,
-        [parameter]: { ...current[parameter], fieldErrors, error: '' },
+        [parameter]: { ...(current[parameter] ?? row), fieldErrors, error: '' },
       }))
       return
     }
 
     setThresholdRows((current) => ({
       ...current,
-      [parameter]: { ...current[parameter], saving: true, error: '', fieldErrors: {} },
+      [parameter]: { ...(current[parameter] ?? row), saving: true, error: '', fieldErrors: {} },
     }))
 
     try {
@@ -288,7 +318,7 @@ export function AquariumDetailPage() {
       setThresholdRows((current) => ({
         ...current,
         [parameter]: {
-          ...current[parameter],
+          ...(current[parameter] ?? row),
           values: {
             min: record.min ?? '',
             target: record.target ?? '',
@@ -305,7 +335,7 @@ export function AquariumDetailPage() {
       setThresholdRows((current) => ({
         ...current,
         [parameter]: {
-          ...current[parameter],
+          ...(current[parameter] ?? row),
           saving: false,
           error: toUserMessage(error),
           fieldErrors: nextFieldErrors,
@@ -432,69 +462,91 @@ export function AquariumDetailPage() {
 
           <Title order={3}>Parameter Limits</Title>
 
-          <Stack gap="md">
-            {THRESHOLD_PARAMETERS.map((parameter) => {
-              const row = thresholdRows[parameter]
-              return (
-                <Card key={parameter} withBorder padding="lg">
-                  <Stack gap="sm">
-                    <Text fw={500}>
-                      {PARAMETER_LABELS[parameter]} ({THRESHOLD_UNITS[parameter]})
-                    </Text>
+          {parametersLoading && (
+            <Stack gap="sm">
+              <Skeleton h={140} radius="md" />
+              <Skeleton h={140} radius="md" />
+            </Stack>
+          )}
 
-                    {row.loading ? (
-                      <Skeleton h={36} radius="md" />
-                    ) : (
-                      <>
-                        <Group grow align="end">
-                          <NumberInput
-                            label="Min"
-                            value={row.values.min}
-                            onChange={(value) =>
-                              handleThresholdFieldChange(parameter, 'min', toNumberOrEmpty(value))
-                            }
-                            error={row.fieldErrors.min}
-                            clampBehavior="none"
-                          />
-                          <NumberInput
-                            label="Target"
-                            value={row.values.target}
-                            onChange={(value) =>
-                              handleThresholdFieldChange(parameter, 'target', toNumberOrEmpty(value))
-                            }
-                            error={row.fieldErrors.target}
-                            clampBehavior="none"
-                          />
-                          <NumberInput
-                            label="Max"
-                            value={row.values.max}
-                            onChange={(value) =>
-                              handleThresholdFieldChange(parameter, 'max', toNumberOrEmpty(value))
-                            }
-                            error={row.fieldErrors.max}
-                            clampBehavior="none"
-                          />
-                        </Group>
+          {!parametersLoading && parametersError && (
+            <Alert color="red" variant="light" title="Could not load parameters">
+              <Stack gap="sm">
+                <Text size="sm">{parametersError}</Text>
+                <Group>
+                  <Button size="xs" variant="outline" onClick={handleRetryParameters}>
+                    Retry
+                  </Button>
+                </Group>
+              </Stack>
+            </Alert>
+          )}
 
-                        {row.error ? <Text c="red" size="sm">{row.error}</Text> : null}
+          {!parametersLoading && !parametersError && (
+            <Stack gap="md">
+              {parameters.map((parameter) => {
+                const row = thresholdRows[parameter.slug] ?? defaultThresholdRowState()
+                return (
+                  <Card key={parameter.slug} withBorder padding="lg">
+                    <Stack gap="sm">
+                      <Text fw={500}>
+                        {parameter.displayName} ({parameter.unit})
+                      </Text>
 
-                        <Group justify="end">
-                          <Button
-                            size="xs"
-                            variant="outline"
-                            loading={row.saving}
-                            onClick={() => void handleSaveThresholdRow(parameter)}
-                          >
-                            Save {PARAMETER_LABELS[parameter]} Limits
-                          </Button>
-                        </Group>
-                      </>
-                    )}
-                  </Stack>
-                </Card>
-              )
-            })}
-          </Stack>
+                      {row.loading ? (
+                        <Skeleton h={36} radius="md" />
+                      ) : (
+                        <>
+                          <Group grow align="end">
+                            <NumberInput
+                              label="Min"
+                              value={row.values.min}
+                              onChange={(value) =>
+                                handleThresholdFieldChange(parameter.slug, 'min', toNumberOrEmpty(value))
+                              }
+                              error={row.fieldErrors.min}
+                              clampBehavior="none"
+                            />
+                            <NumberInput
+                              label="Target"
+                              value={row.values.target}
+                              onChange={(value) =>
+                                handleThresholdFieldChange(parameter.slug, 'target', toNumberOrEmpty(value))
+                              }
+                              error={row.fieldErrors.target}
+                              clampBehavior="none"
+                            />
+                            <NumberInput
+                              label="Max"
+                              value={row.values.max}
+                              onChange={(value) =>
+                                handleThresholdFieldChange(parameter.slug, 'max', toNumberOrEmpty(value))
+                              }
+                              error={row.fieldErrors.max}
+                              clampBehavior="none"
+                            />
+                          </Group>
+
+                          {row.error ? <Text c="red" size="sm">{row.error}</Text> : null}
+
+                          <Group justify="end">
+                            <Button
+                              size="xs"
+                              variant="outline"
+                              loading={row.saving}
+                              onClick={() => void handleSaveThresholdRow(parameter.slug)}
+                            >
+                              Save {parameter.displayName} Limits
+                            </Button>
+                          </Group>
+                        </>
+                      )}
+                    </Stack>
+                  </Card>
+                )
+              })}
+            </Stack>
+          )}
         </>
       )}
     </Stack>
@@ -560,19 +612,24 @@ function validateThresholdRow(
   values: ThresholdFieldValues,
 ): Partial<Record<keyof ThresholdFieldValues, string>> {
   const errors: Partial<Record<keyof ThresholdFieldValues, string>> = {}
-  const { min: rangeMin, max: rangeMax } = THRESHOLD_SANITY_RANGES[parameter]
+  // A parameter can appear in the catalog before the backend's fixed threshold
+  // sanity-range table recognizes it, so skip the bound check (letting the
+  // backend validate) rather than throwing on an unrecognized parameter.
+  const range = THRESHOLD_SANITY_RANGES[parameter] as { min: number; max: number } | undefined
 
   const min = values.min === '' ? null : Number(values.min)
   const target = values.target === '' ? null : Number(values.target)
   const max = values.max === '' ? null : Number(values.max)
 
-  for (const [key, value] of [
-    ['min', min],
-    ['target', target],
-    ['max', max],
-  ] as const) {
-    if (value !== null && (Number.isNaN(value) || value < rangeMin || value > rangeMax)) {
-      errors[key] = `Must be between ${rangeMin} and ${rangeMax}`
+  if (range) {
+    for (const [key, value] of [
+      ['min', min],
+      ['target', target],
+      ['max', max],
+    ] as const) {
+      if (value !== null && (Number.isNaN(value) || value < range.min || value > range.max)) {
+        errors[key] = `Must be between ${range.min} and ${range.max}`
+      }
     }
   }
 
