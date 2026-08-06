@@ -1,6 +1,5 @@
 import { Box, Button, Stack, Text, Title } from '@mantine/core'
-import { useEffect } from 'react'
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { Navigate, useNavigate } from 'react-router'
 import { toAuthFailureGuidance } from '../auth/authErrorMessaging'

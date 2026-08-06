@@ -75,6 +75,11 @@ export interface PrimaryNavItem {
   icon: ReactNode
 }
 
+// This file mixes icon components with nav-item data; splitting them out is
+// tracked as a deferred follow-up in
+// openspec/changes/refactor-page-hooks-eslint/tasks.md rather than done
+// incidentally here (out of scope for this change).
+// eslint-disable-next-line react-refresh/only-export-components
 export const PRIMARY_NAV_ITEMS: PrimaryNavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: <IconDashboard /> },
   { to: '/calculator', label: 'Calculator', icon: <IconCalculator /> },

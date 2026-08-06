@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { checkReadiness } from '../api/client'
-import { toUserMessage } from '../api/client'
+import { checkReadiness, toUserMessage } from '../api/client'
 
 type ReadinessState = 'loading' | 'ready' | 'error'
 

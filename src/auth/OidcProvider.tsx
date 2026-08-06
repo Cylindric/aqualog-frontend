@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react'
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { AuthProvider, useAuth } from 'react-oidc-context'
 import { setAccessTokenProvider, setRefreshAccessTokenProvider } from '../api/client'
 import { config, hasOidcConfig } from '../config'

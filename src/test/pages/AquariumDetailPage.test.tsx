@@ -21,9 +21,13 @@ vi.mock('../../api/aquariums', () => ({
   updateAquarium: vi.fn(),
 }))
 
-vi.mock('../../api/parameters', () => ({
-  listParameters: vi.fn(),
-}))
+vi.mock('../../api/parameters', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api/parameters')>()
+  return {
+    ...actual,
+    listParameters: vi.fn(),
+  }
+})
 
 vi.mock('../../api/thresholds', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../api/thresholds')>()

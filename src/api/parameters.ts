@@ -24,6 +24,28 @@ interface ParameterListResponse {
   data: ParameterPayload[]
 }
 
+export interface ParameterConfig {
+  slug: string
+  displayName: string
+  unit: string
+}
+
+/**
+ * Narrows the parameter catalog to entries with a known unit (unit is only
+ * null for parameters the backend hasn't finished configuring yet) and
+ * reshapes them for display. Shared by both the aquarium threshold editor and
+ * the measurements page, which independently duplicated this mapping before.
+ */
+export function toParameterConfigs(parameters: ParameterRecord[]): ParameterConfig[] {
+  return parameters
+    .filter((parameter): parameter is ParameterRecord & { unit: string } => parameter.unit !== null)
+    .map((parameter) => ({
+      slug: parameter.slug,
+      displayName: parameter.displayName,
+      unit: parameter.unit,
+    }))
+}
+
 export async function listParameters(signal?: AbortSignal): Promise<ParameterRecord[]> {
   const response = await apiGet<unknown>('/api/v1/parameters', undefined, signal)
 

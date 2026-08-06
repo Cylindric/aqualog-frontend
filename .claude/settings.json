@@ -5,17 +5,26 @@
   },
   "permissions": {
     "allow": [
-      "Read(.)",
-      "Read(//tmp/**)",
       "Bash(curl *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(npm run *)",
-      "Bash(npm view *)",
-      "Bash(npm ls *)",
+      "Bash(npm -v)",
       "Bash(npm install *)",
+      "Bash(npm install *)",
+      "Bash(npm ls *)",
+      "Bash(npm run *)",
+      "Bash(npm run build *)",
+      "Bash(npm run test *)",
+      "Bash(npm view *)",
+      "Bash(npx playwright *)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
       "Bash(npx vitest *)",
-      "Bash(openspec status *)"
+      "Bash(openspec status *)",
+      "Read(.)",
+      "Read(//tmp/**)",
+      "Skill(openspec-propose)",
+      "Skill(openspec-sync-specs)"
     ]
   }
 }

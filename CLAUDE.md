@@ -15,6 +15,7 @@ Using an isolated git worktree for a task is fine. However, do **not** push work
 ```bash
 npm run dev          # Vite dev server on port 9002
 npm run build         # tsc -b && vite build (type-check, then bundle)
+npm run lint           # eslint . (flat config, see eslint.config.js)
 npm run test          # vitest run (single pass)
 npm run test:watch    # vitest watch mode
 npm run preview       # preview the production build
@@ -23,7 +24,7 @@ npm run preview       # preview the production build
 Single test file: `npx vitest run src/test/pages/AquariumsPage.test.tsx`
 Single test by name: `npx vitest run src/test/pages/AquariumsPage.test.tsx -t "test name"`
 
-There is no ESLint config in this repo — don't invent lint commands.
+`npm run lint` uses `@babel/eslint-parser` for `.ts`/`.tsx` (not `typescript-eslint`) — this project is on `typescript@^7.0.2` and no published `typescript-eslint` release supports TS7 yet ([tracking issue](https://github.com/typescript-eslint/typescript-eslint/issues/10940)). Type correctness stays `tsc -b`'s job (`npm run build`); lint covers React Hooks correctness (`eslint-plugin-react-hooks`, pinned to `5.2.0`'s classic rule set — not the `7.x` React Compiler rule set, which this project doesn't use), Fast Refresh compatibility, and general JS mistakes. See `eslint.config.js`'s header comment for the full rationale.
 
 Taskfile (`task <name>`) wraps some of the above plus Docker packaging:
 - `task setup` — `./tools/setup.sh`
