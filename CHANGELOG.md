@@ -1,3 +1,13 @@
+## v1.18.0 (2026-08-06)
+
+### Feat
+
+- add min/max reference lines to measurement trend charts
+
+### Fix
+
+- hard-edge the min/max gradient instead of fading toward target
+
 ## v1.17.1 (2026-08-05)
 
 ### Fix
