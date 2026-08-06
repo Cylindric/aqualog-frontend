@@ -757,14 +757,21 @@ function ParameterTrendChart({
   )
 }
 
+interface ThresholdReferenceLine {
+  y: number
+  label: string
+  color: string
+  labelPosition?: 'insideTopLeft' | 'insideBottomLeft'
+}
+
 interface ThresholdVisuals {
   gradientStops?: { offset: number; color: string }[]
-  referenceLines?: { y: number; label: string; color: string }[]
+  referenceLines?: ThresholdReferenceLine[]
   yDomainMin: number
   yDomainMax: number
 }
 
-function computeThresholdVisuals(
+export function computeThresholdVisuals(
   threshold: ThresholdRecord | null,
   values: number[],
   parameterLabel: string,
@@ -778,10 +785,28 @@ function computeThresholdVisuals(
   const yDomainMin = Math.min(...values, ...boundValues)
   const yDomainMax = Math.max(...values, ...boundValues)
 
-  const referenceLines =
+  const referenceLineCandidates = [
     target !== null
-      ? [{ y: target, label: `Target ${parameterLabel} (${formatValue(target)})`, color: 'accent.4' }]
-      : undefined
+      ? { y: target, label: `Target ${parameterLabel} (${formatValue(target)})`, color: 'accent.4' }
+      : null,
+    min !== null
+      ? {
+          y: min,
+          label: `Min ${parameterLabel} (${formatValue(min)})`,
+          color: 'red.7',
+          labelPosition: 'insideBottomLeft' as const,
+        }
+      : null,
+    max !== null
+      ? {
+          y: max,
+          label: `Max ${parameterLabel} (${formatValue(max)})`,
+          color: 'red.7',
+          labelPosition: 'insideTopLeft' as const,
+        }
+      : null,
+  ].filter((line): line is ThresholdReferenceLine => line !== null)
+  const referenceLines = referenceLineCandidates.length > 0 ? referenceLineCandidates : undefined
 
   if (min === null && max === null) {
     return { referenceLines, yDomainMin, yDomainMax }
@@ -793,15 +818,25 @@ function computeThresholdVisuals(
     return Math.min(100, Math.max(0, ((yDomainMax - value) / yRange) * 100))
   }
 
-  const greenAnchor = target ?? ((min ?? yDomainMin) + (max ?? yDomainMax)) / 2
-
+  // The safe zone is uniformly green between min and max (with no fade toward
+  // target); only the offset itself flips to red, so each threshold gets two
+  // stops at the same offset to create a hard edge instead of a gradual blend.
   const gradientStops = [
-    { offset: 0, color: max !== null ? 'red.7' : 'green.6' },
-    ...(max !== null ? [{ offset: offsetForValue(max), color: 'red.7' }] : []),
-    { offset: offsetForValue(greenAnchor), color: 'green.6' },
-    ...(min !== null ? [{ offset: offsetForValue(min), color: 'red.7' }] : []),
-    { offset: 100, color: min !== null ? 'red.7' : 'green.6' },
-  ].sort((a, b) => a.offset - b.offset)
+    ...(max !== null
+      ? [
+          { offset: 0, color: 'red.7' },
+          { offset: offsetForValue(max), color: 'red.7' },
+          { offset: offsetForValue(max), color: 'green.6' },
+        ]
+      : [{ offset: 0, color: 'green.6' }]),
+    ...(min !== null
+      ? [
+          { offset: offsetForValue(min), color: 'green.6' },
+          { offset: offsetForValue(min), color: 'red.7' },
+          { offset: 100, color: 'red.7' },
+        ]
+      : [{ offset: 100, color: 'green.6' }]),
+  ]
 
   return { gradientStops, referenceLines, yDomainMin, yDomainMax }
 }
