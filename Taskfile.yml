@@ -71,8 +71,8 @@ tasks:
       # SSL_CERT_FILE: "{{.CA_BUNDLE}}"
       # CURL_CA_BUNDLE: "{{.CA_BUNDLE}}"
       FRONTEND_DIR: ./dist
-      AQUALOG_AUTH_MODE: none
-      AQUALOG_AUTH_IMPERSONATE_USER_ID: b85abf08-8958-48fd-988d-7ff93ab2ae6a
+      # AQUALOG_AUTH_MODE: none
+      # AQUALOG_AUTH_IMPERSONATE_USER_ID: b85abf08-8958-48fd-988d-7ff93ab2ae6a
     cmds:
       - cmd: npm ci
       - cmd: npm run build

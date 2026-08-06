@@ -64,6 +64,7 @@ beforeEach(() => {
       bio: null,
       created_at: '',
       updated_at: '',
+      groups: [],
     },
     isLoading: false,
     error: null,
@@ -149,6 +150,7 @@ describe('Shell navigation layout', () => {
         bio: null,
         created_at: '',
         updated_at: '',
+        groups: [],
       },
       isLoading: false,
       error: null,
@@ -169,6 +171,7 @@ describe('Shell navigation layout', () => {
         bio: null,
         created_at: '',
         updated_at: '',
+        groups: [],
       },
       isLoading: false,
       error: null,
@@ -178,6 +181,48 @@ describe('Shell navigation layout', () => {
     renderShell('/dashboard')
 
     expect(screen.getByText('Hi, Fish Keeper')).toBeInTheDocument()
+  })
+
+  it('shows the crown icon next to the identity badge for AquaLogAdmins members', () => {
+    profileMock.mockReturnValue({
+      profile: {
+        id: 'user-1',
+        username: 'fishkeeper42',
+        display_name: 'Fish Keeper',
+        bio: null,
+        created_at: '',
+        updated_at: '',
+        groups: ['AquaLogAdmins'],
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      save: vi.fn(),
+    })
+    renderShell('/dashboard')
+
+    expect(screen.getByLabelText('AquaLog admin')).toBeInTheDocument()
+  })
+
+  it('hides the crown icon for non-admin members', () => {
+    profileMock.mockReturnValue({
+      profile: {
+        id: 'user-1',
+        username: 'fishkeeper42',
+        display_name: 'Fish Keeper',
+        bio: null,
+        created_at: '',
+        updated_at: '',
+        groups: ['Everyone'],
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      save: vi.fn(),
+    })
+    renderShell('/dashboard')
+
+    expect(screen.queryByLabelText('AquaLog admin')).not.toBeInTheDocument()
   })
 
   it('falls back to plain Authenticated badge when no username or display name is present', () => {
@@ -210,6 +255,7 @@ describe('Shell navigation layout', () => {
         bio: null,
         created_at: '',
         updated_at: '',
+        groups: [],
       },
       isLoading: false,
       error: null,

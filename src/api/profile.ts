@@ -7,16 +7,40 @@ export interface UserProfile {
   bio: string | null
   created_at: string
   updated_at: string
+  groups: string[]
+}
+
+const AQUALOG_ADMINS_GROUP = 'AquaLogAdmins'
+
+export function isAquaLogAdmin(profile: UserProfile): boolean {
+  return profile.groups.includes(AQUALOG_ADMINS_GROUP)
 }
 
 export interface UpdateProfileInput {
   display_name?: string
 }
 
+// The raw API response may omit `groups` (older/mismatched backend
+// responses) — normalized to `UserProfile.groups: []` before being
+// returned to callers, see `normalizeUserProfile`.
+interface RawUserProfile {
+  id: string
+  username: string | null
+  display_name: string | null
+  bio: string | null
+  created_at: string
+  updated_at: string
+  groups?: string[]
+}
+
 interface UserProfileResponse {
   success: boolean
   request_id: string
-  data: UserProfile
+  data: RawUserProfile
+}
+
+function normalizeUserProfile(raw: RawUserProfile): UserProfile {
+  return { ...raw, groups: raw.groups ?? [] }
 }
 
 export async function getMyProfile(signal?: AbortSignal): Promise<UserProfile> {
@@ -25,7 +49,7 @@ export async function getMyProfile(signal?: AbortSignal): Promise<UserProfile> {
     throw new ApiRequestError('Received an unexpected profile response shape from the API.', 502)
   }
 
-  return response.data
+  return normalizeUserProfile(response.data)
 }
 
 export async function updateMyProfile(
@@ -37,10 +61,10 @@ export async function updateMyProfile(
     throw new ApiRequestError('Received an unexpected profile response shape from the API.', 502)
   }
 
-  return response.data
+  return normalizeUserProfile(response.data)
 }
 
-function isUserProfile(input: unknown): input is UserProfile {
+function isRawUserProfile(input: unknown): input is RawUserProfile {
   if (typeof input !== 'object' || input === null) return false
   const obj = input as Record<string, unknown>
 
@@ -50,7 +74,9 @@ function isUserProfile(input: unknown): input is UserProfile {
     (typeof obj.display_name === 'string' || obj.display_name === null) &&
     (typeof obj.bio === 'string' || obj.bio === null) &&
     typeof obj.created_at === 'string' &&
-    typeof obj.updated_at === 'string'
+    typeof obj.updated_at === 'string' &&
+    (obj.groups === undefined ||
+      (Array.isArray(obj.groups) && obj.groups.every((group) => typeof group === 'string')))
   )
 }
 
@@ -61,6 +87,6 @@ function isUserProfileResponse(input: unknown): input is UserProfileResponse {
   return (
     typeof obj.success === 'boolean' &&
     typeof obj.request_id === 'string' &&
-    isUserProfile(obj.data)
+    isRawUserProfile(obj.data)
   )
 }
