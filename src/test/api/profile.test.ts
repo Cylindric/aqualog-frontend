@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { getMyProfile, updateMyProfile } from '../../api/profile'
+import { getMyProfile, isAquaLogAdmin, updateMyProfile } from '../../api/profile'
 import { setAccessTokenProvider, setRefreshAccessTokenProvider } from '../../api/client'
 
 vi.mock('../../config', () => ({
@@ -55,12 +55,62 @@ describe('profile api', () => {
       bio: null,
       created_at: '2026-07-18T10:00:00Z',
       updated_at: '2026-07-18T10:00:00Z',
+      groups: [],
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toContain('/api/v1/me')
     expect(options.method).toBe('GET')
+  })
+
+  it('parses groups from the profile response and reports admin status', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        request_id: 'req-1',
+        data: {
+          id: 'user-1',
+          username: 'reefer',
+          display_name: 'Reefer',
+          bio: null,
+          created_at: '2026-07-18T10:00:00Z',
+          updated_at: '2026-07-18T10:00:00Z',
+          groups: ['AquaLogAdmins', 'Everyone'],
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const profile = await getMyProfile()
+    expect(profile.groups).toEqual(['AquaLogAdmins', 'Everyone'])
+    expect(isAquaLogAdmin(profile)).toBe(true)
+  })
+
+  it('treats a missing groups field as no groups and not an admin', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        request_id: 'req-1',
+        data: {
+          id: 'user-1',
+          username: 'reefer',
+          display_name: 'Reefer',
+          bio: null,
+          created_at: '2026-07-18T10:00:00Z',
+          updated_at: '2026-07-18T10:00:00Z',
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const profile = await getMyProfile()
+    expect(profile.groups).toEqual([])
+    expect(isAquaLogAdmin(profile)).toBe(false)
   })
 
   it('updates the display name with a patch payload', async () => {

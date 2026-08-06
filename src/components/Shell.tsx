@@ -10,11 +10,13 @@ import {
   Stack,
   Text,
 } from '@mantine/core'
+import { CrownIcon } from '@phosphor-icons/react'
 import type { CSSProperties, ReactNode } from 'react'
 import { NavLink } from 'react-router'
 import { useReadinessCheck } from '../hooks/useReadinessCheck'
 import { useAuth } from 'react-oidc-context'
 import { config } from '../config'
+import { isAquaLogAdmin } from '../api/profile'
 import { useProfile } from '../features/profile/useProfile'
 import { PRIMARY_NAV_ITEMS } from './primaryNav'
 
@@ -101,7 +103,18 @@ function AuthStatusBadge() {
 
   return (
     <Group gap="xs">
-      <Badge color="accent" variant="light" radius="xl" px="xs" py="2px">
+      <Badge
+        color="accent"
+        variant="light"
+        radius="xl"
+        px="xs"
+        py="2px"
+        rightSection={
+          isAquaLogAdmin(profile) ? (
+            <CrownIcon size={12} weight="fill" aria-label="AquaLog admin" />
+          ) : undefined
+        }
+      >
         {identity ? `Hi, ${identity}` : 'Authenticated'}
       </Badge>
       {config.authMode === 'oauth' && <SignOutButton />}
