@@ -1,7 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { Button, Stack, Text, Title } from '@mantine/core'
-import { Suspense, lazy, useEffect } from 'react'
-import type { ReactNode } from 'react'
+import { Suspense, lazy, useEffect, type ReactNode } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { Shell } from './components/Shell'
 import { ConfigErrorPage } from './pages/ConfigErrorPage'

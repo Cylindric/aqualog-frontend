@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Box, Card, SimpleGrid, Stack, Text, Title, UnstyledButton } from '@mantine/core'
 import { useNavigate } from 'react-router'
 import { listAquariums } from '../api/aquariums'

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { computeThresholdVisuals } from '../../pages/MeasurementsPage'
-import type { ThresholdRecord } from '../../api/thresholds'
+import { computeThresholdVisuals } from '../../../features/measurements/thresholdVisuals'
+import type { ThresholdRecord } from '../../../api/thresholds'
 
 function threshold(overrides: Partial<ThresholdRecord>): ThresholdRecord {
   return {

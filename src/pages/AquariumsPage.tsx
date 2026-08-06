@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import {
   Alert,
-  Box,
   Button,
   Flex,
   Group,
@@ -16,59 +15,46 @@ import {
   TextInput,
   Title,
 } from '@mantine/core'
-import { type AquariumRecord, createAquarium, deleteAquarium, listAquariums } from '../api/aquariums'
-import { ApiRequestError, toUserMessage } from '../api/client'
-
-interface AquariumFormValues {
-  name: string
-  type: string
-  volumeValue: number | ''
-  volumeUnit: 'L' | 'gal_us'
-}
-
-type ViewState = 'loading' | 'ready' | 'error'
-
-const AQUARIUM_TYPES = [
-  'Saltwater Reef',
-  'Saltwater FOWLR',
-  'Freshwater Planted',
-  'Freshwater Community',
-]
-
-const defaultFormValues = (): AquariumFormValues => ({
-  name: '',
-  type: AQUARIUM_TYPES[0],
-  volumeValue: '',
-  volumeUnit: 'L',
-})
+import { type AquariumRecord } from '../api/aquariums'
+import { ApiRequestError } from '../api/client'
+import { EmptyState } from '../components/EmptyState'
+import { useAquariumsList } from '../features/aquariums/useAquariumsList'
+import {
+  AQUARIUM_TYPES,
+  type AquariumFormValues,
+  defaultAquariumFormValues,
+  mapAquariumValidationErrors,
+  toAquariumUpdatePayload,
+  validateAquariumForm,
+} from '../features/aquariums/aquariumForm'
 
 export function AquariumsPage() {
   const navigate = useNavigate()
-  const [viewState, setViewState] = useState<ViewState>('loading')
-  const [pageError, setPageError] = useState('')
-  const [aquariums, setAquariums] = useState<AquariumRecord[]>([])
+  const {
+    status,
+    aquariums,
+    error: pageError,
+    retry,
+    creating,
+    createError,
+    create,
+    dismissCreateError,
+    deletingId,
+    deleteError,
+    remove,
+    dismissDeleteError,
+  } = useAquariumsList()
+
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [formValues, setFormValues] = useState<AquariumFormValues>(defaultFormValues())
+  const [formValues, setFormValues] = useState<AquariumFormValues>(defaultAquariumFormValues())
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof AquariumFormValues, string>>>({})
-  const [submitError, setSubmitError] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [deletingAquariumId, setDeletingAquariumId] = useState<string | null>(null)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [aquariumPendingDelete, setAquariumPendingDelete] = useState<AquariumRecord | null>(null)
 
-  useEffect(() => {
-    const controller = new AbortController()
-    void loadAquariums(controller.signal)
-
-    return () => {
-      controller.abort()
-    }
-  }, [])
-
   const handleAdd = () => {
-    setFormValues(defaultFormValues())
+    setFormValues(defaultAquariumFormValues())
     setFormErrors({})
-    setSubmitError('')
+    dismissCreateError()
     setDrawerOpen(true)
   }
 
@@ -77,94 +63,61 @@ export function AquariumsPage() {
   }
 
   const handleCloseDrawer = () => {
-    if (saving) return
+    if (creating) return
 
     setDrawerOpen(false)
     setFormErrors({})
-    setSubmitError('')
-  }
-
-  const handleRetry = () => {
-    void loadAquariums()
+    dismissCreateError()
   }
 
   const handleRequestDelete = (aquarium: AquariumRecord) => {
-    if (deletingAquariumId) return
+    if (deletingId) return
 
+    dismissDeleteError()
     setAquariumPendingDelete(aquarium)
     setDeleteModalOpen(true)
   }
 
   const handleCloseDeleteModal = () => {
-    if (deletingAquariumId) return
+    if (deletingId) return
 
     setDeleteModalOpen(false)
     setAquariumPendingDelete(null)
+    dismissDeleteError()
   }
 
   const handleDelete = async () => {
     if (!aquariumPendingDelete) return
 
-    setDeletingAquariumId(aquariumPendingDelete.id)
     try {
-      await deleteAquarium(aquariumPendingDelete.id)
-      setAquariums((current) => current.filter((item) => item.id !== aquariumPendingDelete.id))
+      await remove(aquariumPendingDelete.id)
       setDeleteModalOpen(false)
       setAquariumPendingDelete(null)
-    } catch (error) {
-      setPageError(toUserMessage(error))
-      setViewState('error')
-    } finally {
-      setDeletingAquariumId(null)
+    } catch {
+      // remove() already recorded deleteError; leave the modal open (rather
+      // than the original's page-wide error banner) so the user sees the
+      // failure in place and can retry or cancel without losing the list.
     }
   }
 
   const handleSubmit = async () => {
-    const clientValidation = validateForm(formValues)
+    const clientValidation = validateAquariumForm(formValues)
     if (Object.keys(clientValidation).length > 0) {
       setFormErrors(clientValidation)
       return
     }
 
-    setSaving(true)
-    setSubmitError('')
     setFormErrors({})
 
     try {
-      const payload = {
-        name: formValues.name.trim(),
-        type: formValues.type,
-        volume: {
-          value: Number(formValues.volumeValue),
-          unit: formValues.volumeUnit,
-        },
-      }
-
-      const created = await createAquarium(payload)
-      setAquariums((current) => [created, ...current])
-
+      await create(toAquariumUpdatePayload(formValues))
       handleCloseDrawer()
     } catch (error) {
-      setSubmitError(toUserMessage(error))
+      // create() already recorded createError for display below; only the
+      // field-level validation mapping is this component's job.
       if (error instanceof ApiRequestError && error.validationErrors?.length) {
-        setFormErrors(mapApiValidationErrors(error))
+        setFormErrors(mapAquariumValidationErrors(error))
       }
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function loadAquariums(signal?: AbortSignal) {
-    setViewState('loading')
-    setPageError('')
-
-    try {
-      const response = await listAquariums(signal)
-      setAquariums(response)
-      setViewState('ready')
-    } catch (error) {
-      setPageError(toUserMessage(error))
-      setViewState('error')
     }
   }
 
@@ -172,19 +125,19 @@ export function AquariumsPage() {
     <Stack gap="md" pb="md">
       <Flex justify="space-between" align="center">
         <Title order={2}>My Aquariums</Title>
-        <Button onClick={handleAdd} disabled={viewState === 'loading'}>
+        <Button onClick={handleAdd} disabled={status === 'loading'}>
           Add Aquarium
         </Button>
       </Flex>
 
-      {viewState === 'loading' && <AquariumsLoadingState />}
+      {status === 'loading' && <AquariumsLoadingState />}
 
-      {viewState === 'error' && (
+      {status === 'error' && (
         <Alert color="red" variant="light" title="Could not load aquariums">
           <Stack gap="sm">
             <Text size="sm">{pageError}</Text>
             <Group>
-              <Button size="xs" variant="outline" onClick={handleRetry}>
+              <Button size="xs" variant="outline" onClick={retry}>
                 Retry
               </Button>
             </Group>
@@ -192,27 +145,15 @@ export function AquariumsPage() {
         </Alert>
       )}
 
-      {viewState === 'ready' && aquariums.length === 0 ? (
-        <Box
-          py="xl"
-          px="md"
-          ta="center"
-          style={{
-            border: '1px dashed var(--mantine-color-dark-4)',
-            borderRadius: 'var(--mantine-radius-md)',
-          }}
-        >
-          <Text size="lg" fw={500} mb="xs">
-            No aquariums yet
-          </Text>
-          <Text c="dimmed" mb="md">
-            Add your first aquarium to start tracking maintenance and parameters
-          </Text>
-          <Button onClick={handleAdd}>Add Your First Aquarium</Button>
-        </Box>
+      {status === 'ready' && aquariums.length === 0 ? (
+        <EmptyState
+          title="No aquariums yet"
+          description="Add your first aquarium to start tracking maintenance and parameters"
+          action={<Button onClick={handleAdd}>Add Your First Aquarium</Button>}
+        />
       ) : null}
 
-      {viewState === 'ready' && aquariums.length > 0 ? (
+      {status === 'ready' && aquariums.length > 0 ? (
         <Table highlightOnHover withTableBorder>
           <Table.Thead>
             <Table.Tr>
@@ -243,7 +184,7 @@ export function AquariumsPage() {
                       size="compact-sm"
                       variant="subtle"
                       color="red"
-                      loading={deletingAquariumId === aquarium.id}
+                      loading={deletingId === aquarium.id}
                       onClick={() => handleRequestDelete(aquarium)}
                     >
                       Delete
@@ -266,13 +207,14 @@ export function AquariumsPage() {
           <Text size="sm">
             {`Delete aquarium "${aquariumPendingDelete?.name ?? ''}"? This action cannot be undone.`}
           </Text>
+          {deleteError ? <Text c="red" size="sm">{deleteError}</Text> : null}
           <Group justify="flex-end">
-            <Button variant="default" onClick={handleCloseDeleteModal} disabled={Boolean(deletingAquariumId)}>
+            <Button variant="default" onClick={handleCloseDeleteModal} disabled={Boolean(deletingId)}>
               Cancel
             </Button>
             <Button
               color="red"
-              loading={Boolean(deletingAquariumId)}
+              loading={Boolean(deletingId)}
               onClick={() => void handleDelete()}
             >
               Delete
@@ -343,13 +285,13 @@ export function AquariumsPage() {
             />
           </Group>
 
-          {submitError ? <Text c="red" size="sm">{submitError}</Text> : null}
+          {createError ? <Text c="red" size="sm">{createError}</Text> : null}
 
           <Group grow>
-            <Button variant="default" onClick={handleCloseDrawer} disabled={saving}>
+            <Button variant="default" onClick={handleCloseDrawer} disabled={creating}>
               Cancel
             </Button>
-            <Button onClick={() => void handleSubmit()} loading={saving}>
+            <Button onClick={() => void handleSubmit()} loading={creating}>
               Add Aquarium
             </Button>
           </Group>
@@ -367,53 +309,6 @@ function AquariumsLoadingState() {
       <Skeleton h={44} radius="md" />
     </Stack>
   )
-}
-
-function validateForm(values: AquariumFormValues): Partial<Record<keyof AquariumFormValues, string>> {
-  const errors: Partial<Record<keyof AquariumFormValues, string>> = {}
-
-  if (values.name.trim().length === 0) {
-    errors.name = 'Name is required'
-  }
-
-  if (values.type.trim().length === 0) {
-    errors.type = 'Type is required'
-  }
-
-  const volumeValue = Number(values.volumeValue)
-  if (values.volumeValue === '' || Number.isNaN(volumeValue) || volumeValue <= 0) {
-    errors.volumeValue = 'Volume must be greater than 0'
-  }
-
-  if (values.volumeUnit !== 'L' && values.volumeUnit !== 'gal_us') {
-    errors.volumeUnit = 'Select a valid unit'
-  }
-
-  return errors
-}
-
-function mapApiValidationErrors(
-  error: ApiRequestError,
-): Partial<Record<keyof AquariumFormValues, string>> {
-  const errors: Partial<Record<keyof AquariumFormValues, string>> = {}
-
-  for (const item of error.validationErrors ?? []) {
-    const fieldKey = item.loc.join('.')
-    if (fieldKey.endsWith('name')) {
-      errors.name = item.msg
-    }
-    if (fieldKey.endsWith('type')) {
-      errors.type = item.msg
-    }
-    if (fieldKey.endsWith('volume.value')) {
-      errors.volumeValue = item.msg
-    }
-    if (fieldKey.endsWith('volume.unit')) {
-      errors.volumeUnit = item.msg
-    }
-  }
-
-  return errors
 }
 
 function formatDate(dateString: string): string {
