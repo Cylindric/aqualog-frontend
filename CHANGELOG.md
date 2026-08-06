@@ -1,3 +1,13 @@
+## v1.19.0 (2026-08-06)
+
+### Feat
+
+- show a crown badge for AquaLog admins in the top bar
+
+### Fix
+
+- refactor
+
 ## v1.18.0 (2026-08-06)
 
 ### Feat
